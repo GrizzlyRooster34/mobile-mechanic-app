@@ -1,0 +1,52 @@
+{
+  "name": "heinicus-mobile-mechanic-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "postinstall": "prisma generate",
+    "lint": "next lint",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@next/font": "^13.4.19",
+    "@prisma/client": "^5.1.1",
+    "@tanstack/react-query": "^4.32.6",
+    "@trpc/client": "^10.37.1",
+    "@trpc/next": "^10.37.1",
+    "@trpc/react-query": "^10.37.1",
+    "@trpc/server": "^10.37.1",
+    "next": "^13.4.19",
+    "next-auth": "^4.23.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "stripe": "^12.18.0",
+    "zod": "^3.22.2",
+    "zustand": "^4.4.1",
+    "axios": "^1.5.0",
+    "react-signature-canvas": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.44.2",
+    "@types/node": "^20.5.0",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^8.47.0",
+    "eslint-config-next": "^13.4.19",
+    "postcss": "^8.4.27",
+    "prettier": "^3.0.0",
+    "prettier-plugin-tailwindcss": "^0.5.1",
+    "prisma": "^5.1.1",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.1.6"
+  },
+  "ct3aMetadata": {
+    "initVersion": "7.20.2"
+  }
+}
