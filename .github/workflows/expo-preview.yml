@@ -1,0 +1,72 @@
+name: Expo Preview Build
+
+on:
+  push:
+    branches: [main, expo-preview]
+    paths:
+      - 'app.config.js'
+      - 'package.json'
+      - 'src/**'
+      - 'assets/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app.config.js'
+      - 'package.json'
+      - 'src/**'
+      - 'assets/**'
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup Expo CLI
+        run: npm install -g @expo/cli eas-cli
+        
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+        
+      - name: Expo Doctor
+        run: npx expo doctor
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Build for Preview (Development)
+        if: github.event_name == 'pull_request'
+        run: npx eas-cli build --platform all --profile preview --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Build for Production
+        if: github.ref == 'refs/heads/main'
+        run: npx eas-cli build --platform all --profile production --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Create Update (OTA)
+        if: github.ref == 'refs/heads/main'
+        run: npx eas-cli update --branch production --message "${{ github.event.head_commit.message }}"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Comment PR with Preview
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Mobile app preview build completed! Check your Expo dashboard for the latest build: https://expo.dev/accounts/heinicus1/projects/heinicus-mobile-mechanic'
+            })
