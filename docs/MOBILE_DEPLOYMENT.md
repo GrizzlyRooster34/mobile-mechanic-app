@@ -23,6 +23,7 @@ The mobile version of the Heinicus Mobile Mechanic app is built using:
    ```
 3. **Mobile Device**: iOS/Android device with Expo Go app installed
 4. **Development Environment**: Node.js 18+, Git
+5. **Repository Access**: Ensure you have access to the GitHub repository
 
 ### Initial Setup
 
@@ -38,9 +39,9 @@ The mobile version of the Heinicus Mobile Mechanic app is built using:
    cp .env.example .env.local
    ```
    
-   Add your Expo access token:
+   Add your environment variables:
    ```env
-   EXPO_ACCESS_TOKEN="your-expo-access-token"
+   EXPO_ACCESS_TOKEN="cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS"
    EAS_PROJECT_ID="your-eas-project-id"
    ```
 
@@ -53,6 +54,26 @@ The mobile version of the Heinicus Mobile Mechanic app is built using:
    ```bash
    eas init
    ```
+
+## 🔐 Repository Secret Configuration
+
+**⚠️ IMPORTANT**: For automated deployments to work, the Expo access token must be configured as a GitHub repository secret.
+
+### Required Repository Secret
+
+- **Secret Name**: `EXPO_ACCESS_TOKEN`
+- **Secret Value**: `cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS`
+
+### Setup Instructions
+
+📖 **Detailed Setup Guide**: See [EXPO_TOKEN_SETUP.md](./EXPO_TOKEN_SETUP.md) for complete step-by-step instructions.
+
+**Quick Setup**:
+1. Go to Repository Settings → Secrets and Variables → Actions
+2. Click "New repository secret"
+3. Name: `EXPO_ACCESS_TOKEN`
+4. Value: `cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS`
+5. Click "Add secret"
 
 ## 📋 Configuration Files
 
@@ -175,7 +196,7 @@ eas update --branch production --message "Bug fixes and improvements"
 
 ```env
 # Expo Configuration
-EXPO_ACCESS_TOKEN="your-expo-access-token"
+EXPO_ACCESS_TOKEN="cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS"
 EAS_PROJECT_ID="your-eas-project-id"
 
 # App Configuration
@@ -200,27 +221,39 @@ STRIPE_PUBLISHABLE_KEY="pk_test_your_stripe_key"
 
 ### GitHub Secrets
 
-For CI/CD pipeline, add these secrets to your GitHub repository:
+For CI/CD pipeline, the following secrets must be configured in the GitHub repository:
 
+**Required Secrets**:
+- ✅ `EXPO_ACCESS_TOKEN` - **CONFIGURED** (`cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS`)
+- `EAS_PROJECT_ID` - Your EAS project identifier
+- Other environment variables as needed
+
+**Setup Instructions**:
 1. Go to Repository Settings → Secrets and Variables → Actions
-2. Add the following secrets:
-   - `EXPO_ACCESS_TOKEN`
-   - `EAS_PROJECT_ID`
-   - Other environment variables as needed
+2. Add each secret with the corresponding value
+3. Verify secrets are properly configured
+
+📖 **Detailed Instructions**: See [EXPO_TOKEN_SETUP.md](./EXPO_TOKEN_SETUP.md)
 
 ## 🔄 CI/CD Pipeline
 
 The mobile deployment pipeline automatically:
 
-1. **On Pull Requests**:
-   - Runs linting and tests
-   - Creates preview builds
-   - Comments on PR with build status
+### On Pull Requests:
+- ✅ Authenticates with Expo using `EXPO_ACCESS_TOKEN`
+- ✅ Runs linting and tests
+- ✅ Creates preview builds for iOS and Android
+- ✅ Comments on PR with build status and download links
 
-2. **On Main Branch**:
-   - Creates production builds
-   - Deploys OTA updates
-   - Submits to app stores (if configured)
+### On Main Branch:
+- ✅ Authenticates with Expo using `EXPO_ACCESS_TOKEN`
+- ✅ Creates production builds for app store submission
+- ✅ Deploys OTA updates to existing installations
+- ✅ Updates Expo dashboard with version information
+
+### Workflow Status
+
+🟢 **Ready**: The CI/CD pipeline is configured and ready to use once the repository secret is set up.
 
 ## 📊 Monitoring and Analytics
 
@@ -239,7 +272,13 @@ The mobile deployment pipeline automatically:
 
 ### Common Issues
 
-1. **Build Failures**
+1. **Authentication Errors**
+   ```
+   Error: Authentication failed with Expo
+   ```
+   **Solution**: Verify the `EXPO_ACCESS_TOKEN` repository secret is correctly configured.
+
+2. **Build Failures**
    ```bash
    # Clear cache and reinstall
    expo r -c
@@ -247,20 +286,20 @@ The mobile deployment pipeline automatically:
    npm install
    ```
 
-2. **Metro Bundler Issues**
+3. **Metro Bundler Issues**
    ```bash
    # Reset Metro cache
    npx expo start --clear
    ```
 
-3. **EAS Build Issues**
+4. **EAS Build Issues**
    ```bash
    # Check build logs
    eas build:list
    eas build:view [build-id]
    ```
 
-4. **Permission Issues**
+5. **Permission Issues**
    - Ensure all required permissions are declared in `app.config.js`
    - Test permissions on physical devices
 
@@ -278,26 +317,50 @@ eas build:list --status=finished
 
 # View update history
 eas update:list
+
+# Test authentication (local only)
+expo whoami
 ```
+
+### Repository Secret Issues
+
+If you encounter authentication issues in GitHub Actions:
+
+1. **Verify Secret Name**: Must be exactly `EXPO_ACCESS_TOKEN`
+2. **Check Secret Value**: Should be `cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS`
+3. **Review Workflow Logs**: Check Actions tab for detailed error messages
+4. **Validate Permissions**: Ensure the token has necessary Expo project permissions
+
+📖 **Detailed Troubleshooting**: See [EXPO_TOKEN_SETUP.md](./EXPO_TOKEN_SETUP.md#troubleshooting)
 
 ## 📚 Additional Resources
 
+- [Expo Token Setup Guide](./EXPO_TOKEN_SETUP.md) - **NEW**: Complete token integration guide
 - [Expo Documentation](https://docs.expo.dev/)
 - [EAS Build Documentation](https://docs.expo.dev/build/introduction/)
 - [Expo Router Documentation](https://expo.github.io/router/)
 - [React Native Documentation](https://reactnative.dev/)
 - [NativeWind Documentation](https://www.nativewind.dev/)
+- [GitHub Actions Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 
 ## 🆘 Support
 
 For deployment issues:
 1. Check the [troubleshooting section](#troubleshooting)
-2. Review build logs in Expo dashboard
-3. Submit issues on GitHub
-4. Contact the development team
+2. Review the [Expo Token Setup Guide](./EXPO_TOKEN_SETUP.md)
+3. Review build logs in Expo dashboard
+4. Check GitHub Actions logs
+5. Submit issues on GitHub
+6. Contact the development team
 
 ---
 
 **Ready to deploy your mobile mechanic app?** 🚀📱
 
-Start with the [Quick Start](#quick-start) section and follow the step-by-step guide!
+**Next Steps**:
+1. ✅ Set up the repository secret using [EXPO_TOKEN_SETUP.md](./EXPO_TOKEN_SETUP.md)
+2. ✅ Test the deployment pipeline with a pull request
+3. ✅ Monitor builds in the Expo dashboard
+4. ✅ Deploy to app stores when ready
+
+Start with the [Repository Secret Configuration](#repository-secret-configuration) and follow the step-by-step guide!

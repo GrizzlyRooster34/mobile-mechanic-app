@@ -1,275 +1,336 @@
-# Heinicus Mobile Mechanic App - AI Integration
+# 🔧 Heinicus Mobile Mechanic App
 
-A comprehensive AI-powered mobile mechanic service platform with integrated customer support and mechanic assistant agents.
+A comprehensive mobile and web application for connecting customers with professional mechanics, featuring AI-powered assistance, real-time communication, and seamless payment processing.
 
 ## 🚀 Features
 
-### Customer Support Agent
-- **Appointment Booking**: Intelligent scheduling assistance
-- **Service Status Updates**: Real-time job tracking
-- **Pricing Information**: Instant cost estimates
-- **Troubleshooting**: Basic diagnostic help
-- **Payment Support**: Billing and payment assistance
-- **Emergency Routing**: Urgent issue escalation
+### 🌐 Multi-Platform Support
+- **Web Application** - Full-featured web interface
+- **Mobile App** - Native iOS and Android apps via Expo Go
+- **Responsive Design** - Optimized for all screen sizes
+- **Cross-Platform Sync** - Seamless data synchronization
 
-### Mechanic Assistant Agent
-- **Diagnostic Assistance**: AI-powered problem diagnosis
-- **Parts Identification**: Automated parts lookup and specifications
-- **Repair Procedures**: Step-by-step repair guidance
-- **VIN Decoding**: Vehicle information extraction
-- **Safety Guidance**: Real-time safety alerts and PPE recommendations
-- **Maintenance Schedules**: Automated maintenance planning
+### 🤖 AI-Powered Assistance
+- **Customer Support Agent** - 24/7 intelligent customer assistance
+- **Mechanic Assistant** - Technical guidance and diagnostic support
+- **Smart Recommendations** - Personalized service suggestions
+- **Natural Language Processing** - Conversational AI interactions
 
-### Core Platform
-- **Real-time Job Tracking**: Start/pause/stop functionality
-- **Signature Capture**: Digital job completion
-- **Stripe Integration**: Secure payment processing
-- **Mobile-First Design**: PWA-ready responsive interface
-- **Session Management**: Context-aware conversations
+### 📱 Mobile-First Experience
+- **Expo Go Integration** - Instant testing and deployment
+- **Native Performance** - Optimized for mobile devices
+- **Offline Capabilities** - Core features work without internet
+- **Push Notifications** - Real-time updates and alerts
 
-## 🛠 Tech Stack
+### 💳 Integrated Payments
+- **Stripe Integration** - Secure payment processing
+- **Multiple Payment Methods** - Cards, digital wallets, and more
+- **Transparent Pricing** - Clear cost breakdowns
+- **Automated Billing** - Streamlined payment workflows
 
-- **Frontend**: Next.js 13, React 18, TypeScript
-- **Backend**: tRPC, Prisma ORM
-- **State Management**: Zustand
-- **Styling**: Tailwind CSS
-- **AI Integration**: Abacus.AI
-- **Payments**: Stripe
-- **Authentication**: NextAuth.js
-- **Database**: PostgreSQL (configurable)
+## 🛠 Technology Stack
 
-## 📋 Prerequisites
+### Frontend
+- **Next.js 14** - React framework with App Router
+- **React Native** - Mobile app development
+- **Expo SDK 50** - Cross-platform mobile framework
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **NativeWind** - Tailwind for React Native
 
-- Node.js 18+
-- PostgreSQL database
-- Abacus.AI account with API access
-- Stripe account for payments
+### Backend
+- **tRPC** - End-to-end typesafe APIs
+- **Prisma** - Database ORM and migrations
+- **PostgreSQL** - Robust relational database
+- **NextAuth.js** - Authentication and session management
+
+### AI & Services
+- **Abacus.AI** - AI agent platform
+- **Stripe** - Payment processing
+- **Expo EAS** - Build and deployment services
+
+### DevOps & Deployment
+- **GitHub Actions** - CI/CD pipeline
+- **EAS Build** - Mobile app builds
+- **EAS Update** - Over-the-air updates
+- **Vercel** - Web app hosting (optional)
 
 ## 🚀 Quick Start
 
-### 1. Clone and Install
+### Prerequisites
+
+- **Node.js 18+** - JavaScript runtime
+- **npm or yarn** - Package manager
+- **Git** - Version control
+- **Expo CLI** - Mobile development tools
+- **PostgreSQL** - Database server
+
+### Installation
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/GrizzlyRooster34/mobile-mechanic-app.git
+   cd mobile-mechanic-app
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Setup**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Update `.env.local` with your configuration:
+   ```env
+   DATABASE_URL="your-postgresql-connection-string"
+   NEXTAUTH_SECRET="your-nextauth-secret"
+   EXPO_ACCESS_TOKEN="cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS"
+   # ... other variables
+   ```
+
+4. **Database Setup**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Start Development**
+   ```bash
+   # Web development
+   npm run dev
+   
+   # Mobile development
+   npm run mobile
+   ```
+
+## 📱 Mobile Development
+
+### Expo Go Setup
+
+1. **Install Expo Go**
+   - iOS: [App Store](https://apps.apple.com/app/expo-go/id982107779)
+   - Android: [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+2. **Start Mobile Development**
+   ```bash
+   npm run mobile
+   ```
+
+3. **Test on Device**
+   - Scan QR code with Expo Go app
+   - App loads instantly on your device
+
+### Mobile Commands
 
 ```bash
-git clone https://github.com/GrizzlyRooster34/mobile-mechanic-app.git
-cd mobile-mechanic-app
-npm install
+# Start development server
+npm run mobile
+
+# Platform-specific development
+npm run ios          # iOS Simulator
+npm run android      # Android Emulator
+
+# Build commands
+npm run build:android    # Android build
+npm run build:ios        # iOS build
+npm run update          # OTA update
 ```
 
-### 2. Environment Setup
+## 🔐 Repository Configuration
+
+### Required GitHub Secrets
+
+For automated mobile deployments, configure these repository secrets:
+
+**Essential Secret**:
+- `EXPO_ACCESS_TOKEN` = `cBydYET0qZVmkVtGKQHFDGci0JKqW1QToRlzEMiS`
+
+**Setup Instructions**:
+1. Go to Repository Settings → Secrets and Variables → Actions
+2. Click "New repository secret"
+3. Add the secret with the exact name and value above
+
+📖 **Detailed Setup**: See [docs/EXPO_TOKEN_SETUP.md](docs/EXPO_TOKEN_SETUP.md)
+
+## 🏗 Deployment
+
+### Web Deployment
 
 ```bash
-cp .env.example .env.local
-```
-
-Configure your environment variables:
-
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/heinicus_mobile_mechanic"
-
-# NextAuth
-NEXTAUTH_SECRET="your-nextauth-secret"
-NEXTAUTH_URL="http://localhost:3000"
-
-# AI Agents
-ABACUS_AI_API_KEY="your-abacus-ai-api-key"
-CUSTOMER_SUPPORT_AGENT_ID="c816aa206"
-MECHANIC_ASSISTANT_AGENT_ID="your-mechanic-assistant-agent-id"
-
-# Stripe
-STRIPE_SECRET_KEY="sk_test_your_stripe_secret_key"
-STRIPE_PUBLISHABLE_KEY="pk_test_your_stripe_publishable_key"
-```
-
-### 3. Database Setup
-
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### 4. Start Development Server
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000` to see the application.
-
-## 📖 Documentation
-
-- **[AI Integration Guide](docs/AI_INTEGRATION_README.md)** - Comprehensive integration documentation
-- **[API Documentation](docs/API_DOCUMENTATION.md)** - Detailed API reference
-- **[Setup Guide](docs/SETUP_GUIDE.md)** - Step-by-step setup instructions
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-
-## 🔧 Usage Examples
-
-### Customer Support Integration
-
-```tsx
-import { CustomerSupportWidget } from '~/components/chat/CustomerSupportWidget';
-
-function CustomerPage() {
-  return (
-    <div>
-      <CustomerSupportWidget
-        customerId="customer-123"
-        context={{
-          vehicleInfo: {
-            make: "Toyota",
-            model: "Camry",
-            year: 2020
-          }
-        }}
-        onActionRequired={(action) => {
-          if (action.type === 'booking') {
-            // Handle appointment booking
-          }
-        }}
-      />
-    </div>
-  );
-}
-```
-
-### Mechanic Assistant Integration
-
-```tsx
-import { MechanicAssistantWidget } from '~/components/chat/MechanicAssistantWidget';
-
-function MechanicDashboard() {
-  return (
-    <div>
-      <MechanicAssistantWidget
-        mechanicId="mechanic-456"
-        context={{
-          currentJob: {
-            vehicleInfo: { make: "Honda", model: "Civic", year: 2019 },
-            symptoms: ["engine noise", "rough idle"]
-          }
-        }}
-        onDiagnosticUpdate={(diagnostics) => {
-          // Handle diagnostic updates
-        }}
-      />
-    </div>
-  );
-}
-```
-
-### API Usage
-
-```typescript
-// Customer support chat
-const response = await api.ai.customerSupport.chat.mutate({
-  message: "I need to schedule an appointment",
-  customerId: "customer-123"
-});
-
-// Mechanic assistance
-const assistance = await api.ai.mechanicAssistant.chat.mutate({
-  message: "Help me diagnose engine noise",
-  mechanicId: "mechanic-456"
-});
-
-// VIN decoding
-const vinData = await api.ai.mechanicAssistant.decodeVIN.mutate({
-  vin: "1HGBH41JXMN109186"
-});
-```
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run AI integration tests
-npm run test:ai
-
-# Run with coverage
-npm run test:coverage
-```
-
-## 📦 Deployment
-
-### Vercel (Recommended)
-
-```bash
+# Build for production
 npm run build
-vercel --prod
-```
 
-### Docker
-
-```bash
-docker build -t heinicus-mobile-mechanic .
-docker run -p 3000:3000 heinicus-mobile-mechanic
-```
-
-### Manual Deployment
-
-```bash
-npm run build
+# Start production server
 npm start
 ```
 
-## 🔒 Security
+### Mobile Deployment
 
-- API keys stored securely in environment variables
-- Input validation using Zod schemas
-- Rate limiting protection
-- Session-based authentication
-- HTTPS enforcement in production
+```bash
+# Development builds
+eas build --profile development
 
-## 📊 Monitoring
+# Production builds
+eas build --profile production
 
-The application includes built-in monitoring for:
+# Over-the-air updates
+eas update --branch production
+```
 
-- AI service health and response times
-- API usage and rate limiting
-- Error rates and types
-- User interaction patterns
+### Automated Deployment
 
-Access health checks at `/api/trpc/ai.healthCheck`
+The CI/CD pipeline automatically:
+- ✅ **Pull Requests**: Creates preview builds
+- ✅ **Main Branch**: Deploys production builds and OTA updates
+- ✅ **Quality Checks**: Runs linting, tests, and type checking
+
+## 📚 Documentation
+
+### Setup Guides
+- [📱 Mobile Deployment](docs/MOBILE_DEPLOYMENT.md) - Complete mobile setup guide
+- [🔐 Expo Token Setup](docs/EXPO_TOKEN_SETUP.md) - Repository secret configuration
+- [📲 Expo Go Setup](docs/EXPO_GO_SETUP.md) - Quick start with Expo Go
+- [⚙️ Setup Guide](docs/SETUP_GUIDE.md) - General application setup
+
+### Technical Documentation
+- [🤖 AI Integration](docs/AI_INTEGRATION_README.md) - AI agents and services
+- [📡 API Documentation](docs/API_DOCUMENTATION.md) - tRPC API reference
+- [🐛 Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+## 🧪 Testing
+
+### Web Testing
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Type checking
+npm run type-check
+```
+
+### Mobile Testing
+```bash
+# Test with Expo Go
+npm run mobile
+
+# Run on simulators
+npm run ios
+npm run android
+
+# Validate configuration
+expo doctor
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. **Fork the Repository**
+2. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Make Changes**
+4. **Test Thoroughly**
+   - Web: `npm run dev`
+   - Mobile: `npm run mobile`
+5. **Submit Pull Request**
+
+### Development Workflow
+
+1. **Local Development**
+   - Make changes to code
+   - Test on web and mobile
+   - Ensure all tests pass
+
+2. **Pull Request**
+   - Automated preview builds
+   - Code review process
+   - CI/CD validation
+
+3. **Deployment**
+   - Merge to main branch
+   - Automated production deployment
+   - OTA updates for mobile
+
+## 🔧 Configuration
+
+### Environment Variables
+
+See [.env.example](.env.example) for all required environment variables.
+
+**Key Variables**:
+- `EXPO_ACCESS_TOKEN` - Mobile deployment authentication
+- `DATABASE_URL` - PostgreSQL connection
+- `NEXTAUTH_SECRET` - Authentication secret
+- `STRIPE_SECRET_KEY` - Payment processing
+- `ABACUS_AI_API_KEY` - AI services
+
+### Mobile Configuration
+
+- **app.config.js** - Expo app configuration
+- **eas.json** - Build and deployment settings
+- **metro.config.js** - Metro bundler configuration
+
+## 📊 Project Status
+
+### ✅ Completed Features
+- ✅ Web application with Next.js
+- ✅ Mobile app with Expo integration
+- ✅ AI-powered customer support
+- ✅ Stripe payment integration
+- ✅ Database schema and API
+- ✅ CI/CD pipeline for mobile deployment
+- ✅ Comprehensive documentation
+
+### 🚧 In Progress
+- 🚧 Advanced mobile features (camera, location)
+- 🚧 Push notifications
+- 🚧 Offline functionality
+- 🚧 App store submissions
+
+### 📋 Planned Features
+- 📋 Real-time chat system
+- 📋 Advanced analytics dashboard
+- 📋 Multi-language support
+- 📋 Advanced AI diagnostics
+
+## 🆘 Support
+
+### Getting Help
+
+1. **Documentation** - Check the [docs](docs/) directory
+2. **Issues** - Submit GitHub issues for bugs
+3. **Discussions** - Use GitHub Discussions for questions
+4. **Email** - Contact the development team
+
+### Common Issues
+
+- **Mobile Build Failures** - See [EXPO_TOKEN_SETUP.md](docs/EXPO_TOKEN_SETUP.md)
+- **Database Connection** - Check DATABASE_URL configuration
+- **Authentication Issues** - Verify NEXTAUTH_SECRET setup
+- **Payment Problems** - Confirm Stripe key configuration
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
-- **Documentation**: Check the `/docs` folder for detailed guides
-- **Issues**: Submit issues on GitHub
-- **Email**: Contact the development team
-- **Community**: Join our Discord server
-
-## 🎯 Roadmap
-
-- [ ] Advanced diagnostic AI models
-- [ ] Multi-language support
-- [ ] Voice interaction capabilities
-- [ ] AR-powered repair guidance
-- [ ] IoT device integration
-- [ ] Advanced analytics dashboard
-
 ## 🙏 Acknowledgments
 
-- Built with ❤️ by Cody & the development team
-- Powered by Abacus.AI for intelligent assistance
-- Special thanks to the open-source community
+- **Expo Team** - Amazing mobile development platform
+- **Next.js Team** - Excellent React framework
+- **Abacus.AI** - Powerful AI agent platform
+- **Stripe** - Reliable payment processing
+- **Open Source Community** - Countless helpful libraries
 
 ---
 
-**Ready to revolutionize mobile mechanic services with AI?** 🚗⚡
+**🚀 Ready to revolutionize mobile mechanic services?**
 
-Get started with the [Setup Guide](docs/SETUP_GUIDE.md) or dive into the [API Documentation](docs/API_DOCUMENTATION.md).
+Start with the [Quick Start](#quick-start) guide and check out the [mobile deployment documentation](docs/MOBILE_DEPLOYMENT.md) to get your app running on devices in minutes!
+
+**📱 Mobile-First • 🤖 AI-Powered • 💳 Payment-Ready • 🔧 Mechanic-Focused**
