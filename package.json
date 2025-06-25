@@ -2,6 +2,7 @@
   "name": "heinicus-mobile-mechanic-app",
   "version": "1.0.0",
   "private": true,
+  "main": "expo-router/entry",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
@@ -9,7 +10,20 @@
     "lint": "next lint",
     "start": "next start",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "mobile": "expo start",
+    "mobile:dev": "expo start --dev-client",
+    "mobile:tunnel": "expo start --tunnel",
+    "build:android": "eas build --platform android",
+    "build:ios": "eas build --platform ios",
+    "build:all": "eas build --platform all",
+    "submit:android": "eas submit --platform android",
+    "submit:ios": "eas submit --platform ios",
+    "update": "eas update",
+    "preview": "expo start --web",
+    "export": "expo export"
   },
   "dependencies": {
     "@next/font": "^13.4.19",
@@ -27,7 +41,28 @@
     "zod": "^3.22.2",
     "zustand": "^4.4.1",
     "axios": "^1.5.0",
-    "react-signature-canvas": "^1.0.6"
+    "react-signature-canvas": "^1.0.6",
+    "expo": "~50.0.0",
+    "expo-router": "~3.4.0",
+    "expo-status-bar": "~1.11.0",
+    "expo-constants": "~15.4.0",
+    "expo-linking": "~6.2.0",
+    "expo-font": "~11.10.0",
+    "expo-splash-screen": "~0.26.0",
+    "expo-system-ui": "~2.9.0",
+    "expo-web-browser": "~12.8.0",
+    "expo-location": "~16.5.0",
+    "expo-camera": "~14.1.0",
+    "expo-image-picker": "~14.7.0",
+    "expo-secure-store": "~12.8.0",
+    "react-native": "0.73.6",
+    "react-native-web": "~0.19.6",
+    "react-native-safe-area-context": "4.8.2",
+    "react-native-screens": "~3.29.0",
+    "react-native-gesture-handler": "~2.14.0",
+    "react-native-reanimated": "~3.6.2",
+    "@expo/vector-icons": "^14.0.0",
+    "nativewind": "^2.0.11"
   },
   "devDependencies": {
     "@types/eslint": "^8.44.2",
@@ -44,7 +79,12 @@
     "prettier-plugin-tailwindcss": "^0.5.1",
     "prisma": "^5.1.1",
     "tailwindcss": "^3.3.3",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "@babel/core": "^7.20.0",
+    "@expo/cli": "~0.17.0",
+    "@expo/metro-config": "~0.17.0",
+    "metro": "^0.80.0",
+    "tailwindcss-react-native": "^1.7.10"
   },
   "ct3aMetadata": {
     "initVersion": "7.20.2"
