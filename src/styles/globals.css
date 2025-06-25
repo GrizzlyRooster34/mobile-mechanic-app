@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .mobile-container {
+    @apply px-4 py-2;
+  }
+  
+  .mobile-card {
+    @apply bg-gray-800 rounded-xl p-4 mb-4;
+  }
+  
+  .mobile-button {
+    @apply bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg;
+  }
+  
+  .mobile-input {
+    @apply bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3;
+  }
+}
+
+/* Dark theme for mobile */
+.dark {
+  color-scheme: dark;
+}
+
+/* Safe area handling */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Touch-friendly sizing */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading states */
+.loading-skeleton {
+  @apply bg-gray-700 animate-pulse rounded;
+}
+
+/* Error states */
+.error-text {
+  @apply text-red-400;
+}
+
+.success-text {
+  @apply text-green-400;
+}
+
+/* Mobile navigation */
+.mobile-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700;
+}
+
+.mobile-nav-item {
+  @apply flex-1 py-2 px-1 text-center;
+}
+
+.mobile-nav-item.active {
+  @apply text-blue-400;
+}
+
+/* Chat interface */
+.chat-container {
+  @apply flex-1 bg-gray-900;
+}
+
+.chat-message {
+  @apply mb-4 px-4;
+}
+
+.chat-message.user {
+  @apply items-end;
+}
+
+.chat-message.assistant {
+  @apply items-start;
+}
+
+.chat-bubble {
+  @apply max-w-xs lg:max-w-md px-4 py-2 rounded-2xl;
+}
+
+.chat-bubble.user {
+  @apply bg-blue-600 text-white;
+}
+
+.chat-bubble.assistant {
+  @apply bg-gray-700 text-white;
+}
+
+/* Form styles */
+.form-group {
+  @apply mb-4;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-300 mb-2;
+}
+
+.form-input {
+  @apply w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.form-textarea {
+  @apply w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px];
+}
+
+.form-select {
+  @apply w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors;
+}
+
+/* Card components */
+.card {
+  @apply bg-gray-800 rounded-xl p-6 shadow-lg;
+}
+
+.card-header {
+  @apply border-b border-gray-700 pb-4 mb-4;
+}
+
+.card-title {
+  @apply text-xl font-bold text-white;
+}
+
+.card-subtitle {
+  @apply text-gray-400 text-sm;
+}
+
+.card-body {
+  @apply text-gray-300;
+}
+
+.card-footer {
+  @apply border-t border-gray-700 pt-4 mt-4;
+}
+
+/* Status indicators */
+.status-online {
+  @apply bg-green-500;
+}
+
+.status-offline {
+  @apply bg-gray-500;
+}
+
+.status-busy {
+  @apply bg-red-500;
+}
+
+.status-away {
+  @apply bg-yellow-500;
+}
+
+/* Progress indicators */
+.progress-bar {
+  @apply w-full bg-gray-700 rounded-full h-2;
+}
+
+.progress-fill {
+  @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
+}
+
+/* Notification styles */
+.notification {
+  @apply fixed top-4 right-4 max-w-sm bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg z-50;
+}
+
+.notification.success {
+  @apply border-green-500;
+}
+
+.notification.error {
+  @apply border-red-500;
+}
+
+.notification.warning {
+  @apply border-yellow-500;
+}
+
+.notification.info {
+  @apply border-blue-500;
+}
