@@ -120,7 +120,11 @@ export function VinScanner({ onVehicleDecoded, onCancel, initialVin = '' }: VinS
 
   const isValidVin = (vinCode: string): boolean => {
     if (!vinCode || vinCode.length !== 17) return false;
-    return VIN_VALIDATION_REGEX.test(vinCode.toUpperCase());
+    if (!VIN_VALIDATION_REGEX.test(vinCode.toUpperCase())) return false;
+    
+    // Validate check digit (9th character)
+    const calculatedCheckDigit = calculateCheckDigit(vinCode);
+    return vinCode[8].toUpperCase() === calculatedCheckDigit;
   };
 
   const calculateCheckDigit = (vinCode: string): string => {
@@ -145,11 +149,20 @@ export function VinScanner({ onVehicleDecoded, onCancel, initialVin = '' }: VinS
     return remainder === 10 ? 'X' : remainder.toString();
   };
 
-  const decodeVinNHTSA = async (vinCode: string): Promise<VinDecodeResult> => {
+  const decodeVinNHTSA = async (vinCode: string, timeout = 10000): Promise<VinDecodeResult> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     try {
       const response = await fetch(
-        `${NHTSA_API_BASE}/DecodeVin/${vinCode}?format=json`
+        `${NHTSA_API_BASE}/DecodeVin/${vinCode}?format=json`,
+        { 
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        }
       );
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`NHTSA API error: ${response.status}`);
@@ -183,6 +196,8 @@ export function VinScanner({ onVehicleDecoded, onCancel, initialVin = '' }: VinS
     } catch (error) {
       console.error('NHTSA API error:', error);
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 

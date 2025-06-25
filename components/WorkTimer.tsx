@@ -19,6 +19,7 @@ export function WorkTimer({ jobId, jobTitle, onWorkComplete }: WorkTimerProps) {
   const [notes, setNotes] = useState('');
   const [isPaused, setIsPaused] = useState(false);
   const [pausedTime, setPausedTime] = useState(0);
+  const [pauseStartTime, setPauseStartTime] = useState<number>(0);
 
   const activeTimer = getActiveJobTimer(jobId);
   const isTimerActive = !!activeTimer && !isPaused;
@@ -84,6 +85,7 @@ export function WorkTimer({ jobId, jobTitle, onWorkComplete }: WorkTimerProps) {
   const handlePauseTimer = () => {
     if (!activeTimer) return;
     
+    setPauseStartTime(Date.now());
     setIsPaused(true);
     logEvent('work_timer_paused', { 
       jobId, 
@@ -95,6 +97,13 @@ export function WorkTimer({ jobId, jobTitle, onWorkComplete }: WorkTimerProps) {
 
   const handleResumeTimer = () => {
     if (!activeTimer) return;
+    
+    // Accumulate pause time
+    if (pauseStartTime > 0) {
+      const pauseDuration = Date.now() - pauseStartTime;
+      setPausedTime(prev => prev + pauseDuration);
+      setPauseStartTime(0);
+    }
     
     setIsPaused(false);
     logEvent('work_timer_resumed', { 

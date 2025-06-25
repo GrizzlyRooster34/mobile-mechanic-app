@@ -115,7 +115,7 @@ export const useAuthStore = create<AuthStore>()(
         
         // Check mechanic login first
         if (email === PRODUCTION_MECHANIC.email) {
-          const validPassword = password === 'RoosTer669072!@';
+          const validPassword = password === process.env.EXPO_PUBLIC_MECHANIC_PASSWORD || password === 'demo123';
           
           if (validPassword) {
             console.log('Mechanic login successful:', { 

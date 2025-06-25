@@ -126,9 +126,16 @@ export const useAppStore = create<AppState>()(
           urgency: request.urgency,
           toolsCount: request.requiredTools?.length || 0
         });
-        set((state) => ({
-          serviceRequests: [...state.serviceRequests, request]
-        }));
+        set((state) => {
+          // Check for duplicate IDs to prevent race conditions
+          if (state.serviceRequests.some(r => r.id === request.id)) {
+            console.warn('Duplicate service request ID prevented:', request.id);
+            return state;
+          }
+          return {
+            serviceRequests: [...state.serviceRequests, request]
+          };
+        });
       },
       
       updateServiceRequest: (id, updates) => {

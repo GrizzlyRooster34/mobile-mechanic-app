@@ -62,7 +62,13 @@ export default function CustomerHomeScreen() {
       </View>
 
       {/* Emergency Button */}
-      <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyPress}>
+      <TouchableOpacity 
+        style={styles.emergencyButton} 
+        onPress={handleEmergencyPress}
+        accessibilityRole="button"
+        accessibilityLabel="Emergency roadside assistance"
+        accessibilityHint="Request immediate 24/7 roadside assistance"
+      >
         <Icons.Phone size={24} color={Colors.white} />
         <View style={styles.emergencyContent}>
           <Text style={styles.emergencyTitle}>Emergency Roadside</Text>
@@ -77,6 +83,9 @@ export default function CustomerHomeScreen() {
           <TouchableOpacity 
             style={styles.statCard}
             onPress={() => handleQuickAction('quotes')}
+            accessibilityRole="button"
+            accessibilityLabel={`${pendingRequests + activeRequests} active service requests`}
+            accessibilityHint="View your pending and in-progress service requests"
           >
             <Text style={styles.statNumber}>{pendingRequests + activeRequests}</Text>
             <Text style={styles.statLabel}>Active Requests</Text>
@@ -262,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     width: '48%',
-    minHeight: 80,
+    minHeight: 88, // Increased for accessibility
     justifyContent: 'center',
   },
   quickActionText: {
