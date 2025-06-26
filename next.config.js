@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   // Exclude mobile-app directory from Next.js compilation
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
@@ -28,20 +27,6 @@ const nextConfig = {
     // Make AI agent configuration available to client-side
     CUSTOMER_SUPPORT_AGENT_ID: process.env.CUSTOMER_SUPPORT_AGENT_ID,
     MECHANIC_ASSISTANT_AGENT_ID: process.env.MECHANIC_ASSISTANT_AGENT_ID,
-  },
-  // Webpack configuration for AI integration
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Optimize bundle for AI libraries
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-
-    return config;
   },
   // Headers for AI API routes
   async headers() {

@@ -126,7 +126,7 @@ export const STATUS_KEYWORDS = [
 
 export function isBusinessHours(): boolean {
   const now = new Date();
-  const day = now.toLocaleLowerCase().substring(0, 3) as keyof typeof BUSINESS_HOURS;
+  const day = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase() as keyof typeof BUSINESS_HOURS;
   const currentTime = now.toTimeString().substring(0, 5);
   
   const hours = BUSINESS_HOURS[day];
@@ -142,7 +142,7 @@ export function getNextBusinessHour(): string {
   
   // Find next business day
   while (true) {
-    const day = tomorrow.toLocaleLowerCase().substring(0, 3) as keyof typeof BUSINESS_HOURS;
+    const day = tomorrow.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase() as keyof typeof BUSINESS_HOURS;
     const hours = BUSINESS_HOURS[day];
     
     if (hours.open) {
