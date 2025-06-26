@@ -39,6 +39,10 @@ model User {
   // Reviews received by this user (for mechanics)
   reviewsReceived Review[] @relation("ReviewReceiver")
 
+  // User indexes for performance
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -153,6 +157,10 @@ model Vehicle {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Vehicle indexes for performance
+  @@index([vin])
+  @@index([customerId])
+  @@index([make, model, year])
   @@map("vehicles")
 }
 
@@ -213,6 +221,13 @@ model ServiceRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Service Request indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([status])
+  @@index([serviceType])
+  @@index([createdAt])
+  @@index([scheduledDate])
   @@map("service_requests")
 }
 
@@ -313,6 +328,11 @@ model Appointment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Appointment indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([scheduledDate])
+  @@index([status])
   @@map("appointments")
 }
 
@@ -353,6 +373,11 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Payment indexes for performance
+  @@index([customerId])
+  @@index([status])
+  @@index([stripePaymentId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -386,6 +411,11 @@ model AISession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // AI Session indexes for performance
+  @@index([sessionId])
+  @@index([userId])
+  @@index([agentType])
+  @@index([isActive])
   @@map("ai_sessions")
 }
 
@@ -462,6 +492,11 @@ model MaintenanceSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Maintenance Schedule indexes for performance
+  @@index([vehicleId])
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([isCompleted])
   @@map("maintenance_schedules")
 }
 
@@ -537,6 +572,12 @@ model Notification {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Notification indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([type])
+  @@index([isRead])
+  @@index([scheduledFor])
   @@map("notifications")
 }
 
@@ -664,52 +705,3 @@ enum NotificationPriority {
   URGENT
 }
 
-// Indexes for performance optimization
-// User indexes
-@@index([User.email])
-@@index([User.role])
-@@index([User.createdAt])
-
-// Vehicle indexes
-@@index([Vehicle.vin])
-@@index([Vehicle.customerId])
-@@index([Vehicle.make, Vehicle.model, Vehicle.year])
-
-// Service Request indexes
-@@index([ServiceRequest.customerId])
-@@index([ServiceRequest.mechanicId])
-@@index([ServiceRequest.status])
-@@index([ServiceRequest.serviceType])
-@@index([ServiceRequest.createdAt])
-@@index([ServiceRequest.scheduledDate])
-
-// Payment indexes
-@@index([Payment.customerId])
-@@index([Payment.status])
-@@index([Payment.stripePaymentId])
-@@index([Payment.createdAt])
-
-// AI Session indexes
-@@index([AISession.sessionId])
-@@index([AISession.userId])
-@@index([AISession.agentType])
-@@index([AISession.isActive])
-
-// Appointment indexes
-@@index([Appointment.customerId])
-@@index([Appointment.mechanicId])
-@@index([Appointment.scheduledDate])
-@@index([Appointment.status])
-
-// Notification indexes
-@@index([Notification.customerId])
-@@index([Notification.mechanicId])
-@@index([Notification.type])
-@@index([Notification.isRead])
-@@index([Notification.scheduledFor])
-
-// Maintenance Schedule indexes
-@@index([MaintenanceSchedule.vehicleId])
-@@index([MaintenanceSchedule.customerId])
-@@index([MaintenanceSchedule.dueDate])
-@@index([MaintenanceSchedule.isCompleted])
