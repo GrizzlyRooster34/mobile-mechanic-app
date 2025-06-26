@@ -2,8 +2,27 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    appDir: false, // Keep using pages directory for now
+  // Exclude mobile-app directory from Next.js compilation
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Exclude mobile-app directory from webpack compilation
+    config.module.rules.push({
+      test: /\.(ts|tsx|js|jsx)$/,
+      exclude: /mobile-app/,
+      use: defaultLoaders.babel,
+    });
+    
+    // Optimize bundle for AI libraries
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    return config;
   },
   env: {
     // Make AI agent configuration available to client-side
