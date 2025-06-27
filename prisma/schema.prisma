@@ -139,16 +139,23 @@ model Vehicle {
   color       String?
   licensePlate String?
 
-  // Technical specifications
+  // Technical specifications (enhanced for VIN decoding)
   engine       String?
+  engineCode   String?  // Added for diagnostic targeting
+  displacement String?  // Added for engine specs
   transmission String?
   fuelType     String?
   bodyStyle    String?
+  driveType    String?  // Added for drivetrain info
 
   // Current status
   mileage     Int?
   lastService DateTime?
   nextService DateTime?
+
+  // VIN decode metadata
+  vinDecodeDate DateTime? // When VIN was last decoded
+  vinDecodeSource String? // NHTSA, manual, etc.
 
   // Relationships
   serviceRequests     ServiceRequest[]
@@ -162,6 +169,7 @@ model Vehicle {
   @@index([vin])
   @@index([customerId])
   @@index([make, model, year])
+  @@index([engineCode])  // Added for diagnostic queries
   @@map("vehicles")
 }
 
@@ -170,10 +178,22 @@ model VINDecodeHistory {
   vehicleId String
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   vin       String
-  decodedData Json
-  source    String   // API source used for decoding
+  decodedData Json   // Full NHTSA response
+  source    String   // NHTSA, manual, fallback
+  success   Boolean  @default(true)
+  errorMessage String? // If decode failed
+  
+  // Extracted key fields for quick access
+  make      String?
+  model     String?
+  year      Int?
+  engineCode String?
+  
   createdAt DateTime @default(now())
 
+  @@index([vin])
+  @@index([vehicleId])
+  @@index([source])
   @@map("vin_decode_history")
 }
 
@@ -196,6 +216,10 @@ model ServiceRequest {
   status          ServiceStatus     @default(PENDING)
   estimatedCost   Decimal?          @db.Decimal(10, 2)
   actualCost      Decimal?          @db.Decimal(10, 2)
+  
+  // VIN information for quick access (enhanced)
+  jobVin          String?           // VIN specific to this job
+  jobEngineCode   String?           // Engine code for diagnostic context
   
   // Location information
   serviceLocation String
