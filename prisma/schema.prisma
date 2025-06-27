@@ -58,6 +58,7 @@ model Customer {
   zipCode          String?
   emergencyContact String?
   preferredPayment PaymentMethod @default(CARD)
+  stripeCustomerId String?       @unique
 
   // Relationships
   vehicles            Vehicle[]

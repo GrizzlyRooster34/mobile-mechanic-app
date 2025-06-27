@@ -6,7 +6,7 @@ import { getMechanicAssistantAgent, type MechanicContext } from "~/lib/ai/mechan
 export const aiRouter = createTRPCRouter({
   // Customer Support Agent Endpoints
   customerSupport: createTRPCRouter({
-    chat: publicProcedure
+    chat: protectedProcedure
       .input(z.object({
         message: z.string().min(1).max(1000),
         sessionId: z.string().optional(),
@@ -41,12 +41,23 @@ export const aiRouter = createTRPCRouter({
           }).optional(),
         }).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Get user ID from session
+        const userId = ctx.session?.user?.id;
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+        
+        // Verify user can only access their own customer data
+        if (input.customerId && input.customerId !== userId) {
+          throw new Error('Unauthorized access to customer data');
+        }
+        
         const agent = getCustomerSupportAgent();
         return await agent.handleCustomerQuery({
           message: input.message,
           sessionId: input.sessionId,
-          customerId: input.customerId,
+          customerId: input.customerId || userId,
           context: input.context as CustomerSupportContext,
         });
       }),
