@@ -202,16 +202,85 @@ export class MechanicAssistantAgent {
   }
 
   private parseVINData(response: string): any {
-    // Parse VIN decode response
-    // This would be enhanced based on the actual AI response format
-    return {
-      make: '',
-      model: '',
-      year: 0,
-      engine: '',
-      transmission: '',
-      // ... other VIN data
+    try {
+      // Try to parse JSON response from AI first
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.make || parsed.model || parsed.year) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.log('Failed to parse JSON from AI response, falling back to manual parsing');
+    }
+
+    // Fallback: Extract data from text response
+    const vinData: any = {
+      make: this.extractField(response, ['make', 'manufacturer']),
+      model: this.extractField(response, ['model']),
+      year: this.extractYear(response),
+      engine: this.extractField(response, ['engine', 'motor']),
+      transmission: this.extractField(response, ['transmission', 'trans']),
+      bodyStyle: this.extractField(response, ['body style', 'body type', 'style']),
+      drivetrain: this.extractField(response, ['drivetrain', 'drive', 'awd', 'fwd', 'rwd']),
+      fuelType: this.extractField(response, ['fuel', 'gas', 'diesel', 'electric', 'hybrid']),
+      country: this.extractField(response, ['country', 'origin', 'manufactured']),
+      plantLocation: this.extractField(response, ['plant', 'factory', 'assembly'])
     };
+
+    // Clean up empty values
+    Object.keys(vinData).forEach(key => {
+      if (!vinData[key] || vinData[key] === '') {
+        delete vinData[key];
+      }
+    });
+
+    return vinData;
+  }
+
+  private extractField(text: string, keywords: string[]): string {
+    const lowerText = text.toLowerCase();
+    
+    for (const keyword of keywords) {
+      const patterns = [
+        new RegExp(`${keyword}:?\\s*([^\\n,]+)`, 'i'),
+        new RegExp(`${keyword}\\s+is\\s+([^\\n,]+)`, 'i'),
+        new RegExp(`${keyword}\\s*=\\s*([^\\n,]+)`, 'i')
+      ];
+      
+      for (const pattern of patterns) {
+        const match = lowerText.match(pattern);
+        if (match && match[1]) {
+          return match[1].trim().replace(/['"]/g, '');
+        }
+      }
+    }
+    
+    return '';
+  }
+
+  private extractYear(text: string): number {
+    const yearMatch = text.match(/(?:year|model year):?\s*(\d{4})/i);
+    if (yearMatch && yearMatch[1]) {
+      const year = parseInt(yearMatch[1]);
+      if (year >= 1980 && year <= new Date().getFullYear() + 1) {
+        return year;
+      }
+    }
+    
+    // Look for 4-digit years in general
+    const years = text.match(/\b(19\d{2}|20\d{2})\b/g);
+    if (years) {
+      for (const yearStr of years) {
+        const year = parseInt(yearStr);
+        if (year >= 1980 && year <= new Date().getFullYear() + 1) {
+          return year;
+        }
+      }
+    }
+    
+    return 0;
   }
 
   async getMaintenanceSchedule(vehicleInfo: { make: string; model: string; year: number; mileage: number }): Promise<any[]> {

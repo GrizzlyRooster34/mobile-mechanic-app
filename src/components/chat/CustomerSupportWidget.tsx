@@ -126,10 +126,11 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
 
   if (minimized) {
     return (
-      <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
+      <div className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 ${className}`}>
         <button
           onClick={onToggleMinimize}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-colors"
+          aria-label="Open customer support chat"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -140,17 +141,18 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 w-96 h-[500px] bg-white rounded-lg shadow-xl border z-50 flex flex-col ${className}`}>
+    <div className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-full sm:w-96 h-full sm:h-[500px] max-w-md bg-white rounded-none sm:rounded-lg shadow-xl border z-50 flex flex-col ${className}`} role="dialog" aria-labelledby="chat-header" aria-describedby="chat-messages">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+      <div className="bg-blue-600 text-white p-4 rounded-t-none sm:rounded-t-lg flex justify-between items-center">
         <div>
-          <h3 className="font-semibold">Customer Support</h3>
+          <h3 id="chat-header" className="font-semibold">Customer Support</h3>
           <p className="text-sm opacity-90">We're here to help!</p>
         </div>
         {onToggleMinimize && (
           <button
             onClick={onToggleMinimize}
             className="text-white hover:text-gray-200 transition-colors"
+            aria-label="Minimize chat"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -160,7 +162,7 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div id="chat-messages" className="flex-1 overflow-y-auto p-4 space-y-4" aria-live="polite" aria-label="Chat conversation">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-lg p-3 ${
@@ -184,7 +186,8 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="block w-full text-left text-xs bg-white bg-opacity-20 hover:bg-opacity-30 rounded p-1 transition-colors"
+                      className="block w-full text-left text-xs bg-white bg-opacity-20 hover:bg-opacity-30 focus:bg-opacity-40 focus:outline-none focus:ring-2 focus:ring-white rounded p-1 transition-colors"
+                      tabIndex={0}
                     >
                       {suggestion}
                     </button>
@@ -216,17 +219,24 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type your message..."
-            className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
+            className="flex-1 border rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             disabled={isLoading}
+            aria-label="Chat message input"
+            aria-describedby="input-help-text"
+            autoComplete="off"
           />
           <button
             onClick={() => handleSendMessage(inputMessage)}
             disabled={isLoading || !inputMessage.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg px-4 py-2 text-sm transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            aria-label="Send message"
           >
             Send
           </button>
+        </div>
+        <div id="input-help-text" className="sr-only">
+          Press Enter to send your message, or Shift+Enter to create a new line
         </div>
       </div>
     </div>

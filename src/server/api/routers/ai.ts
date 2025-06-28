@@ -2,11 +2,12 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import { getCustomerSupportAgent, type CustomerSupportContext } from "~/lib/ai/customer-support";
 import { getMechanicAssistantAgent, type MechanicContext } from "~/lib/ai/mechanic-assistant";
+import { queryAbacus, queryAbacusMechanicAssistant } from "~/lib/abacusClient";
 
 export const aiRouter = createTRPCRouter({
   // Customer Support Agent Endpoints
   customerSupport: createTRPCRouter({
-    chat: publicProcedure
+    chat: protectedProcedure
       .input(z.object({
         message: z.string().min(1).max(1000),
         sessionId: z.string().optional(),
@@ -41,12 +42,23 @@ export const aiRouter = createTRPCRouter({
           }).optional(),
         }).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Get user ID from session
+        const userId = ctx.session?.user?.id;
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+        
+        // Verify user can only access their own customer data
+        if (input.customerId && input.customerId !== userId) {
+          throw new Error('Unauthorized access to customer data');
+        }
+        
         const agent = getCustomerSupportAgent();
         return await agent.handleCustomerQuery({
           message: input.message,
           sessionId: input.sessionId,
-          customerId: input.customerId,
+          customerId: input.customerId || userId,
           context: input.context as CustomerSupportContext,
         });
       }),
@@ -140,6 +152,80 @@ export const aiRouter = createTRPCRouter({
       .query(async ({ input }) => {
         const agent = getMechanicAssistantAgent();
         return await agent.getMaintenanceSchedule(input);
+      }),
+
+    // Direct Abacus AI suggestion endpoint for mechanics
+    getAbacusSuggestion: protectedProcedure
+      .input(z.object({ 
+        jobId: z.string(), 
+        description: z.string(),
+        mechanicId: z.string().optional(),
+        vehicleInfo: z.object({
+          make: z.string().optional(),
+          model: z.string().optional(),
+          year: z.number().optional(),
+          vin: z.string().optional(),
+        }).optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        try {
+          const sessionId = `job_${input.jobId}_${Date.now()}`;
+          const context = {
+            mechanicId: input.mechanicId || ctx.session?.user?.id,
+            jobId: input.jobId,
+            vehicleInfo: input.vehicleInfo,
+          };
+          
+          const result = await queryAbacusMechanicAssistant(
+            sessionId,
+            `Please provide diagnostic suggestions for: ${input.description}`,
+            context
+          );
+          
+          return { 
+            reply: result.reply,
+            suggestions: result.suggestions,
+            confidence: result.confidence,
+            sessionId 
+          };
+        } catch (error) {
+          console.error('Abacus suggestion error:', error);
+          throw new Error('Failed to get AI suggestion');
+        }
+      }),
+
+    // General mechanic chat endpoint
+    mechanicChat: protectedProcedure
+      .input(z.object({
+        message: z.string().min(1).max(1000),
+        sessionId: z.string().optional(),
+        jobId: z.string().optional(),
+        mechanicId: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        try {
+          const sessionId = input.sessionId || `mechanic_${ctx.session?.user?.id}_${Date.now()}`;
+          const context = {
+            mechanicId: input.mechanicId || ctx.session?.user?.id,
+            jobId: input.jobId,
+          };
+          
+          const result = await queryAbacusMechanicAssistant(
+            sessionId,
+            input.message,
+            context
+          );
+          
+          return {
+            reply: result.reply,
+            suggestions: result.suggestions,
+            confidence: result.confidence,
+            sessionId
+          };
+        } catch (error) {
+          console.error('Mechanic chat error:', error);
+          throw new Error('Failed to process chat message');
+        }
       }),
   }),
 
