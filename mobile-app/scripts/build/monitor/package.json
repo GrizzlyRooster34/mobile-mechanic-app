@@ -1,0 +1,35 @@
+{
+  "name": "mobile-mechanic-build-monitor",
+  "version": "1.0.0",
+  "description": "Advanced build monitoring system for Mobile Mechanic App",
+  "main": "real-time-monitor.js",
+  "scripts": {
+    "start": "node real-time-monitor.js",
+    "start-predictor": "node predictive-analyzer.js",
+    "start-all": "./start-monitoring.sh",
+    "stop-all": "./stop-monitoring.sh",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "ws": "^8.0.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "build",
+    "monitoring", 
+    "react-native",
+    "expo",
+    "automation",
+    "ci-cd"
+  ],
+  "author": "Build Automation Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/mobile-mechanic-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/mobile-mechanic-app/issues"
+  },
+  "homepage": "https://github.com/yourusername/mobile-mechanic-app#readme"
+}

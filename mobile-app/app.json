@@ -5,63 +5,171 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "heinicus",
     "primaryColor": "#1e40af",
+    "backgroundColor": "#ffffff",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#1e40af"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/fonts/**",
+      "assets/images/**",
+      "assets/icons/**",
+      "assets/*.png",
+      "assets/*.jpg",
+      "assets/*.jpeg"
     ],
+    "jsEngine": "hermes",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 30000,
+      "url": "https://u.expo.dev/heinicus-mobile-mechanic"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.heinicus.mobilemechanic",
       "buildNumber": "1",
+      "deploymentTarget": "13.4",
+      "requireFullScreen": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "associatedDomains": [
+        "applinks:heinicus-mobile-mechanic.com"
+      ],
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryLocation",
+            "NSPrivacyAccessedAPITypeReasons": ["DDA9.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryCamera",
+            "NSPrivacyAccessedAPITypeReasons": ["8FFB.1"]
+          }
+        ]
+      },
       "infoPlist": {
-        "NSCameraUsageDescription": "This app needs access to camera to capture photos of vehicle issues.",
-        "NSLocationWhenInUseUsageDescription": "This app needs location access to find mechanics near you.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to find mechanics near you."
+        "NSCameraUsageDescription": "This app needs access to camera to capture photos of vehicle issues for accurate diagnosis.",
+        "NSLocationWhenInUseUsageDescription": "This app needs location access to find mechanics near you and provide accurate service estimates.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to find mechanics near you and provide accurate service estimates.",
+        "NSMicrophoneUsageDescription": "This app may use microphone for video recordings of vehicle issues.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select existing photos of vehicle issues.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to save photos of vehicle issues to your photo library.",
+        "UIBackgroundModes": ["background-fetch", "background-processing"],
+        "BGTaskSchedulerPermittedIdentifiers": ["com.heinicus.mobilemechanic.refresh"],
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true,
+        "LSApplicationQueriesSchemes": ["tel", "mailto", "maps", "comgooglemaps"],
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent"
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1e40af"
+        "backgroundColor": "#1e40af",
+        "monochromeImage": "./assets/adaptive-icon.png"
       },
       "package": "com.heinicus.mobilemechanic",
       "versionCode": 1,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "minSdkVersion": 23,
+      "allowBackup": false,
+      "networkSecurityConfig": "network_security_config",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "heinicus-mobile-mechanic.com"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
+        "ACCESS_COARSE_LOCATION",  
         "CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "READ_PHONE_STATE"
       ],
       "blockedPermissions": [
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
-      ]
+        "READ_EXTERNAL_STORAGE",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "proguardFiles": ["proguard-rules.pro"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static",
+      "lang": "en"
     },
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": false,
+            "packagingOptions": {
+              "pickFirst": ["**/libc++_shared.so", "**/libjsc.so"],
+              "exclude": ["META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*"]
+            }
+          },
+          "ios": {
+            "ccacheEnabled": true,
+            "useFrameworks": "static",
+            "deploymentTarget": "13.4"
+          }
+        }
+      ],
+      [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find mechanics near you.",
-          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find mechanics near you."
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find mechanics near you and provide accurate service estimates.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find mechanics near you and provide accurate service estimates.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture photos of vehicle issues."
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture photos of vehicle issues for accurate diagnosis.",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for video recordings of vehicle issues.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to select existing images of vehicle issues.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture photos of vehicle issues for accurate diagnosis."
         }
       ],
       [
@@ -69,19 +177,49 @@
         {
           "icon": "./assets/icon.png",
           "color": "#1e40af",
-          "sounds": [
-            "./assets/notification.wav"
-          ]
+          "defaultChannel": "default",
+          "sounds": ["./assets/sounds/notification.wav"],
+          "mode": "production"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/*.ttf", "./assets/fonts/*.otf"]
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID for secure authentication."
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "turboModules": true,
+      "reactCompiler": true
     },
     "extra": {
       "eas": {
         "projectId": "heinicus-mobile-mechanic"
+      },
+      "apiUrl": {
+        "development": "http://localhost:3000/api",
+        "staging": "https://staging-api.heinicus-mobile-mechanic.com",
+        "production": "https://api.heinicus-mobile-mechanic.com"
       }
+    },
+    "hooks": {
+      "postPublish": [
+        {
+          "file": "sentry-expo/upload-sourcemaps",
+          "config": {
+            "organization": "heinicus",
+            "project": "mobile-mechanic"
+          }
+        }
+      ]
     }
   }
 }

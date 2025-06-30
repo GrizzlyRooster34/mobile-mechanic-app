@@ -1,655 +1,925 @@
 #!/bin/bash
 
-# Build Automation Workflow Script
-# This script orchestrates the complete build process with error recovery and monitoring
+# Advanced Build Automation Script
+# Comprehensive build orchestration with monitoring, validation, and recovery
 
-set -e  # Exit on any error
-set -u  # Exit on undefined variables
+set -e
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
-
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
 
 # Project configuration
 PROJECT_ROOT="/home/big_d/mobile-mechanic-app/mobile-app"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${PROJECT_ROOT}/scripts/build/automation.log"
-WORKFLOW_TYPE=""
-PLATFORM=""
-BUILD_TYPE=""
+SCRIPTS_DIR="${PROJECT_ROOT}/scripts/build"
+LOGS_DIR="${PROJECT_ROOT}/logs"
+BUILDS_DIR="${PROJECT_ROOT}/builds"
+MONITOR_DIR="${SCRIPTS_DIR}/monitor"
+
+# Build configuration
+PLATFORM="all"
+BUILD_TYPE="development"
 CLEAN_BUILD=false
 SKIP_VALIDATION=false
-AUTO_VERIFY=true
-AUTO_SUBMIT=false
-SEND_NOTIFICATIONS=false
-EMAIL_RECIPIENT=""
+ENABLE_MONITORING=true
+ENABLE_NOTIFICATIONS=false
+AUTO_RECOVERY=true
+PARALLEL_BUILDS=false
+
+# Notification settings
+EMAIL_NOTIFICATIONS=""
 SLACK_WEBHOOK=""
+DISCORD_WEBHOOK=""
 
-# Initialize log file
-mkdir -p "$(dirname "$LOG_FILE")"
-echo "Build Automation Started: $(date)" > "$LOG_FILE"
+# Performance settings
+MAX_MEMORY_USAGE=2048  # MB
+MAX_BUILD_TIME=1800    # 30 minutes
+MONITOR_INTERVAL=10    # seconds
 
-# Function to show usage
-show_usage() {
-    echo "Usage: $0 [OPTIONS]"
-    echo ""
-    echo "Workflow Types:"
-    echo "  --dev-workflow              Complete development build workflow"
-    echo "  --prod-workflow             Complete production build workflow"
-    echo "  --cloud-workflow            Complete cloud build workflow"
-    echo "  --full-workflow             Complete end-to-end workflow (all platforms, all builds)"
-    echo ""
-    echo "Options:"
-    echo "  -p, --platform PLATFORM     Platform to build for (android|ios|all)"
-    echo "  -t, --type TYPE             Build type (development|production)"
-    echo "  -c, --clean                 Clean build (remove all caches and artifacts)"
-    echo "  -s, --skip-validation       Skip pre-build validation"
-    echo "  -n, --no-verify             Skip post-build verification"
-    echo "  -a, --auto-submit           Auto-submit production builds to stores"
-    echo "  --notify                    Send notifications on completion"
-    echo "  --email EMAIL               Email address for notifications"
-    echo "  --slack WEBHOOK             Slack webhook URL for notifications"
-    echo "  -h, --help                  Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0 --dev-workflow --platform android"
-    echo "  $0 --prod-workflow --platform all --clean --notify"
-    echo "  $0 --cloud-workflow --platform ios --auto-submit"
-    echo "  $0 --full-workflow --email dev@company.com"
-    echo ""
+# Create necessary directories
+setup_directories() {
+    local dirs=("$LOGS_DIR" "$BUILDS_DIR" "$MONITOR_DIR" "$LOGS_DIR/builds" "$LOGS_DIR/monitor")
+    
+    for dir in "${dirs[@]}"; do
+        [[ ! -d "$dir" ]] && mkdir -p "$dir"
+    done
 }
 
-# Parse command line arguments
+# Logging functions
+log() {
+    local level=$1
+    local message=$2
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local log_file="$LOGS_DIR/build-automation.log"
+    
+    case $level in
+        "INFO")  echo -e "${BLUE}[${timestamp}] [INFO] ${message}${NC}" ;;
+        "SUCCESS") echo -e "${GREEN}[${timestamp}] [SUCCESS] ${message}${NC}" ;;
+        "WARN")  echo -e "${YELLOW}[${timestamp}] [WARN] ${message}${NC}" ;;
+        "ERROR") echo -e "${RED}[${timestamp}] [ERROR] ${message}${NC}" ;;
+        "DEBUG") echo -e "${CYAN}[${timestamp}] [DEBUG] ${message}${NC}" ;;
+    esac
+    
+    echo "[${timestamp}] [${level}] ${message}" >> "$log_file"
+}
+
+# Error handling with recovery
+handle_error() {
+    local error_code=$?
+    local line_number=$1
+    local command=$2
+    
+    log "ERROR" "Build failed at line $line_number: $command (exit code: $error_code)"
+    
+    if [[ "$AUTO_RECOVERY" == "true" ]]; then
+        log "INFO" "Attempting automatic error recovery..."
+        attempt_recovery "$error_code" "$command"
+    fi
+    
+    send_notification "error" "Build failed: $command"
+    cleanup_on_failure
+    exit $error_code
+}
+
+# Set up error trap
+trap 'handle_error ${LINENO} "$BASH_COMMAND"' ERR
+
+# Recovery mechanisms
+attempt_recovery() {
+    local error_code=$1
+    local failed_command=$2
+    
+    case $failed_command in
+        *"npm"*)
+            log "INFO" "NPM error detected, attempting recovery..."
+            npm cache clean --force
+            rm -rf node_modules package-lock.json
+            npm install
+            ;;
+        *"expo"*)
+            log "INFO" "Expo error detected, attempting recovery..."
+            npx expo r -c
+            ;;
+        *"gradle"*)
+            log "INFO" "Gradle error detected, attempting recovery..."
+            cd "$PROJECT_ROOT/android"
+            ./gradlew clean
+            cd "$PROJECT_ROOT"
+            ;;
+        *"xcodebuild"*)
+            log "INFO" "Xcode error detected, attempting recovery..."
+            rm -rf "$PROJECT_ROOT/ios/build"
+            ;;
+    esac
+}
+
+# System monitoring
+start_system_monitor() {
+    if [[ "$ENABLE_MONITORING" != "true" ]]; then
+        return
+    fi
+    
+    log "INFO" "Starting system monitoring..."
+    
+    # Memory monitoring
+    (
+        while true; do
+            local memory_usage=$(ps -o pid,vsz,rss,pcpu,comm -p $$ | tail -1 | awk '{print $2/1024}')
+            if (( $(echo "$memory_usage > $MAX_MEMORY_USAGE" | bc -l) )); then
+                log "WARN" "High memory usage detected: ${memory_usage}MB"
+                send_notification "warning" "High memory usage: ${memory_usage}MB"
+            fi
+            sleep $MONITOR_INTERVAL
+        done
+    ) &
+    
+    MEMORY_MONITOR_PID=$!
+    echo "$MEMORY_MONITOR_PID" > "$LOGS_DIR/monitor_pids"
+    
+    # Build time monitoring
+    BUILD_START_TIME=$(date +%s)
+    (
+        sleep $MAX_BUILD_TIME
+        log "ERROR" "Build timeout exceeded ($MAX_BUILD_TIME seconds)"
+        send_notification "error" "Build timeout exceeded"
+        kill -TERM $$
+    ) &
+    
+    TIMEOUT_MONITOR_PID=$!
+    echo "$TIMEOUT_MONITOR_PID" >> "$LOGS_DIR/monitor_pids"
+}
+
+stop_system_monitor() {
+    if [[ -f "$LOGS_DIR/monitor_pids" ]]; then
+        while read -r pid; do
+            kill "$pid" 2>/dev/null || true
+        done < "$LOGS_DIR/monitor_pids"
+        rm -f "$LOGS_DIR/monitor_pids"
+    fi
+}
+
+# Notification system
+send_notification() {
+    local type=$1
+    local message=$2
+    
+    if [[ "$ENABLE_NOTIFICATIONS" != "true" ]]; then
+        return
+    fi
+    
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local emoji=""
+    
+    case $type in
+        "success") emoji="✅" ;;
+        "error") emoji="❌" ;;
+        "warning") emoji="⚠️" ;;
+        "info") emoji="ℹ️" ;;
+    esac
+    
+    # Email notification
+    if [[ -n "$EMAIL_NOTIFICATIONS" ]]; then
+        send_email_notification "$type" "$message"
+    fi
+    
+    # Slack notification
+    if [[ -n "$SLACK_WEBHOOK" ]]; then
+        send_slack_notification "$type" "$message" "$emoji"
+    fi
+    
+    # Discord notification
+    if [[ -n "$DISCORD_WEBHOOK" ]]; then
+        send_discord_notification "$type" "$message" "$emoji"
+    fi
+}
+
+send_slack_notification() {
+    local type=$1
+    local message=$2
+    local emoji=$3
+    
+    local color=""
+    case $type in
+        "success") color="good" ;;
+        "error") color="danger" ;;
+        "warning") color="warning" ;;
+        *) color="#36a64f" ;;
+    esac
+    
+    local payload=$(cat <<EOF
+{
+    "attachments": [
+        {
+            "color": "$color",
+            "title": "$emoji Mobile Mechanic Build $type",
+            "text": "$message",
+            "fields": [
+                {
+                    "title": "Platform",
+                    "value": "$PLATFORM",
+                    "short": true
+                },
+                {
+                    "title": "Build Type",
+                    "value": "$BUILD_TYPE",
+                    "short": true
+                },
+                {
+                    "title": "Timestamp",
+                    "value": "$(date '+%Y-%m-%d %H:%M:%S')",
+                    "short": false
+                }
+            ]
+        }
+    ]
+}
+EOF
+)
+    
+    curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK" || true
+}
+
+send_discord_notification() {
+    local type=$1
+    local message=$2
+    local emoji=$3
+    
+    local color=""
+    case $type in
+        "success") color=65280 ;;  # Green
+        "error") color=16711680 ;;  # Red
+        "warning") color=16776960 ;; # Yellow
+        *) color=3447003 ;;  # Blue
+    esac
+    
+    local payload=$(cat <<EOF
+{
+    "embeds": [
+        {
+            "title": "$emoji Mobile Mechanic Build $type",
+            "description": "$message",
+            "color": $color,
+            "fields": [
+                {
+                    "name": "Platform",
+                    "value": "$PLATFORM",
+                    "inline": true
+                },
+                {
+                    "name": "Build Type", 
+                    "value": "$BUILD_TYPE",
+                    "inline": true
+                }
+            ],
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+        }
+    ]
+}
+EOF
+)
+    
+    curl -X POST -H 'Content-type: application/json' --data "$payload" "$DISCORD_WEBHOOK" || true
+}
+
+# Pre-build validation
+run_pre_build_validation() {
+    if [[ "$SKIP_VALIDATION" == "true" ]]; then
+        log "INFO" "Skipping pre-build validation"
+        return
+    fi
+    
+    log "INFO" "Running comprehensive pre-build validation..."
+    
+    # Check required files
+    local required_files=("package.json" "tsconfig.json" "app.json" "eas.json")
+    for file in "${required_files[@]}"; do
+        if [[ ! -f "$file" ]]; then
+            log "ERROR" "Required file missing: $file"
+            exit 1
+        fi
+    done
+    log "SUCCESS" "Required files validation passed"
+    
+    # Validate Node.js and npm versions
+    local node_version=$(node --version | sed 's/v//')
+    local npm_version=$(npm --version)
+    log "INFO" "Node.js version: $node_version"
+    log "INFO" "NPM version: $npm_version"
+    
+    # Check Node.js version requirement
+    if ! node -e "process.exit(process.version.match(/^v(\d+)/)[1] >= 16 ? 0 : 1)"; then
+        log "ERROR" "Node.js version 16 or higher required"
+        exit 1
+    fi
+    
+    # Validate TypeScript
+    log "INFO" "Validating TypeScript configuration..."
+    npx tsc --noEmit --skipLibCheck
+    log "SUCCESS" "TypeScript validation passed"
+    
+    # Check dependencies
+    log "INFO" "Validating dependencies..."
+    npm ls --depth=0 || log "WARN" "Some dependency issues detected"
+    
+    # Security audit
+    log "INFO" "Running security audit..."
+    npm audit --audit-level=high || log "WARN" "Security vulnerabilities detected"
+    
+    # Check disk space
+    local available_space=$(df . | tail -1 | awk '{print $4}')
+    if [[ $available_space -lt 1048576 ]]; then  # Less than 1GB
+        log "WARN" "Low disk space: ${available_space}KB available"
+    fi
+    
+    # Platform-specific validation
+    if [[ "$PLATFORM" == "android" || "$PLATFORM" == "all" ]]; then
+        validate_android_environment
+    fi
+    
+    if [[ "$PLATFORM" == "ios" || "$PLATFORM" == "all" ]]; then
+        validate_ios_environment
+    fi
+    
+    log "SUCCESS" "Pre-build validation completed"
+}
+
+validate_android_environment() {
+    log "INFO" "Validating Android build environment..."
+    
+    # Check Android SDK
+    if [[ -z "$ANDROID_HOME" ]]; then
+        log "WARN" "ANDROID_HOME not set"
+    fi
+    
+    # Check Java version
+    if command -v java >/dev/null 2>&1; then
+        local java_version=$(java -version 2>&1 | head -1 | cut -d'"' -f2)
+        log "INFO" "Java version: $java_version"
+    else
+        log "WARN" "Java not found in PATH"
+    fi
+    
+    # Check Gradle wrapper
+    if [[ -f "android/gradlew" ]]; then
+        log "SUCCESS" "Gradle wrapper found"
+        cd android
+        ./gradlew tasks --quiet >/dev/null
+        cd ..
+        log "SUCCESS" "Gradle validation passed"
+    else
+        log "WARN" "Gradle wrapper not found"
+    fi
+}
+
+validate_ios_environment() {
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        log "INFO" "Skipping iOS validation (not on macOS)"
+        return
+    fi
+    
+    log "INFO" "Validating iOS build environment..."
+    
+    # Check Xcode
+    if command -v xcodebuild >/dev/null 2>&1; then
+        local xcode_version=$(xcodebuild -version | head -1)
+        log "INFO" "Xcode version: $xcode_version"
+    else
+        log "WARN" "Xcode not found"
+    fi
+    
+    # Check CocoaPods
+    if command -v pod >/dev/null 2>&1; then
+        local pod_version=$(pod --version)
+        log "INFO" "CocoaPods version: $pod_version"
+    else
+        log "WARN" "CocoaPods not found"
+    fi
+    
+    # Validate iOS project
+    if [[ -f "ios/Podfile" ]]; then
+        log "SUCCESS" "iOS Podfile found"
+    else
+        log "WARN" "iOS Podfile not found"
+    fi
+}
+
+# Build execution with monitoring
+execute_build() {
+    log "INFO" "Executing build for platform: $PLATFORM, type: $BUILD_TYPE"
+    
+    # Start real-time monitoring if available
+    if [[ -f "$MONITOR_DIR/real-time-monitor.js" && "$ENABLE_MONITORING" == "true" ]]; then
+        log "INFO" "Starting real-time build monitor..."
+        node "$MONITOR_DIR/real-time-monitor.js" &
+        BUILD_MONITOR_PID=$!
+        echo "$BUILD_MONITOR_PID" >> "$LOGS_DIR/monitor_pids"
+    fi
+    
+    # Clean build if requested
+    if [[ "$CLEAN_BUILD" == "true" ]]; then
+        clean_build_artifacts
+    fi
+    
+    # Execute platform-specific builds
+    case $PLATFORM in
+        "android")
+            build_android
+            ;;
+        "ios")
+            build_ios
+            ;;
+        "all")
+            if [[ "$PARALLEL_BUILDS" == "true" ]]; then
+                build_parallel
+            else
+                build_android
+                build_ios
+            fi
+            ;;
+        *)
+            log "ERROR" "Unknown platform: $PLATFORM"
+            exit 1
+            ;;
+    esac
+}
+
+clean_build_artifacts() {
+    log "INFO" "Cleaning build artifacts..."
+    
+    local dirs_to_clean=(
+        "builds"
+        "android/app/build"
+        "ios/build" 
+        ".expo"
+        "dist"
+        "node_modules/.cache"
+    )
+    
+    for dir in "${dirs_to_clean[@]}"; do
+        if [[ -d "$dir" ]]; then
+            log "INFO" "Removing $dir..."
+            rm -rf "$dir"
+        fi
+    done
+    
+    # Clear npm cache
+    npm cache clean --force
+    
+    # Clear Expo cache
+    npx expo r -c
+    
+    log "SUCCESS" "Build artifacts cleaned"
+}
+
+build_android() {
+    log "INFO" "Building Android application..."
+    
+    local build_start=$(date +%s)
+    local android_log="$LOGS_DIR/builds/android-build-$(date +%Y%m%d-%H%M%S).log"
+    
+    # Set build profile based on build type
+    local profile="development"
+    case $BUILD_TYPE in
+        "production") profile="production" ;;
+        "preview") profile="preview" ;;
+        "development") profile="development" ;;
+    esac
+    
+    log "INFO" "Using EAS build profile: $profile"
+    
+    # Execute EAS build
+    if eas build --platform android --profile "$profile" --non-interactive --wait 2>&1 | tee "$android_log"; then
+        local build_end=$(date +%s)
+        local build_duration=$((build_end - build_start))
+        
+        log "SUCCESS" "Android build completed in ${build_duration}s"
+        send_notification "success" "Android build completed successfully (${build_duration}s)"
+        
+        # Save build metrics
+        save_build_metrics "android" "$build_duration" "success"
+    else
+        local build_end=$(date +%s)
+        local build_duration=$((build_end - build_start))
+        
+        log "ERROR" "Android build failed after ${build_duration}s"
+        send_notification "error" "Android build failed after ${build_duration}s"
+        
+        save_build_metrics "android" "$build_duration" "failed"
+        return 1
+    fi
+}
+
+build_ios() {
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        log "INFO" "Skipping iOS build (not on macOS)"
+        return
+    fi
+    
+    log "INFO" "Building iOS application..."
+    
+    local build_start=$(date +%s)
+    local ios_log="$LOGS_DIR/builds/ios-build-$(date +%Y%m%d-%H%M%S).log"
+    
+    # Set build profile
+    local profile="development"
+    case $BUILD_TYPE in
+        "production") profile="production" ;;
+        "preview") profile="preview" ;;
+        "development") profile="development" ;;
+    esac
+    
+    log "INFO" "Using EAS build profile: $profile"
+    
+    # Execute EAS build
+    if eas build --platform ios --profile "$profile" --non-interactive --wait 2>&1 | tee "$ios_log"; then
+        local build_end=$(date +%s)
+        local build_duration=$((build_end - build_start))
+        
+        log "SUCCESS" "iOS build completed in ${build_duration}s"
+        send_notification "success" "iOS build completed successfully (${build_duration}s)"
+        
+        save_build_metrics "ios" "$build_duration" "success"
+    else
+        local build_end=$(date +%s)
+        local build_duration=$((build_end - build_start))
+        
+        log "ERROR" "iOS build failed after ${build_duration}s"
+        send_notification "error" "iOS build failed after ${build_duration}s"
+        
+        save_build_metrics "ios" "$build_duration" "failed"
+        return 1
+    fi
+}
+
+build_parallel() {
+    log "INFO" "Starting parallel builds for Android and iOS..."
+    
+    # Start Android build in background
+    (build_android) &
+    local android_pid=$!
+    
+    # Start iOS build in background (if on macOS)
+    local ios_pid=""
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        (build_ios) &
+        ios_pid=$!
+    fi
+    
+    # Wait for builds to complete
+    local android_result=0
+    local ios_result=0
+    
+    wait $android_pid || android_result=$?
+    
+    if [[ -n "$ios_pid" ]]; then
+        wait $ios_pid || ios_result=$?
+    fi
+    
+    # Check results
+    if [[ $android_result -eq 0 && $ios_result -eq 0 ]]; then
+        log "SUCCESS" "All parallel builds completed successfully"
+    else
+        log "ERROR" "One or more parallel builds failed"
+        return 1
+    fi
+}
+
+save_build_metrics() {
+    local platform=$1
+    local duration=$2
+    local status=$3
+    
+    local metrics_file="$LOGS_DIR/builds/metrics-${platform}-$(date +%Y%m%d-%H%M%S).json"
+    
+    cat > "$metrics_file" <<EOF
+{
+    "platform": "$platform",
+    "buildType": "$BUILD_TYPE",
+    "duration": $duration,
+    "status": "$status",
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "nodeVersion": "$(node --version)",
+    "npmVersion": "$(npm --version)",
+    "hostOS": "$OSTYPE"
+}
+EOF
+    
+    log "INFO" "Build metrics saved to $metrics_file"
+}
+
+# Post-build verification
+run_post_build_verification() {
+    log "INFO" "Running post-build verification..."
+    
+    # Check if build artifacts exist
+    local verification_passed=true
+    
+    if [[ "$PLATFORM" == "android" || "$PLATFORM" == "all" ]]; then
+        if ! verify_android_build; then
+            verification_passed=false
+        fi
+    fi
+    
+    if [[ "$PLATFORM" == "ios" || "$PLATFORM" == "all" ]]; then
+        if ! verify_ios_build; then
+            verification_passed=false
+        fi
+    fi
+    
+    if [[ "$verification_passed" == "true" ]]; then
+        log "SUCCESS" "Post-build verification passed"
+        send_notification "success" "Build verification completed successfully"
+    else
+        log "ERROR" "Post-build verification failed"
+        send_notification "error" "Build verification failed"
+        return 1
+    fi
+}
+
+verify_android_build() {
+    log "INFO" "Verifying Android build..."
+    
+    # Check for recent build logs
+    local recent_android_log=$(find "$LOGS_DIR/builds" -name "android-build-*.log" -mmin -60 | head -1)
+    if [[ -n "$recent_android_log" ]]; then
+        if grep -q "Build successful" "$recent_android_log"; then
+            log "SUCCESS" "Android build verification passed"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "Could not verify Android build"
+    return 1
+}
+
+verify_ios_build() {
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        log "INFO" "Skipping iOS build verification (not on macOS)"
+        return 0
+    fi
+    
+    log "INFO" "Verifying iOS build..."
+    
+    # Check for recent build logs
+    local recent_ios_log=$(find "$LOGS_DIR/builds" -name "ios-build-*.log" -mmin -60 | head -1)
+    if [[ -n "$recent_ios_log" ]]; then
+        if grep -q "Build successful" "$recent_ios_log"; then
+            log "SUCCESS" "iOS build verification passed"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "Could not verify iOS build"
+    return 1
+}
+
+# Cleanup function
+cleanup() {
+    log "INFO" "Performing cleanup..."
+    
+    # Stop monitoring processes
+    stop_system_monitor
+    
+    # Stop build monitor if running
+    if [[ -n "$BUILD_MONITOR_PID" ]]; then
+        kill "$BUILD_MONITOR_PID" 2>/dev/null || true
+    fi
+    
+    # Calculate total build time
+    if [[ -n "$BUILD_START_TIME" ]]; then
+        local build_end=$(date +%s)
+        local total_duration=$((build_end - BUILD_START_TIME))
+        log "INFO" "Total build time: ${total_duration}s"
+    fi
+    
+    log "SUCCESS" "Cleanup completed"
+}
+
+cleanup_on_failure() {
+    log "ERROR" "Build failed, performing cleanup..."
+    cleanup
+}
+
+# Trap cleanup on exit
+trap cleanup EXIT
+
+# Workflow functions
+dev_workflow() {
+    log "INFO" "Starting development workflow..."
+    
+    run_pre_build_validation
+    execute_build
+    run_post_build_verification
+    
+    log "SUCCESS" "Development workflow completed"
+}
+
+prod_workflow() {
+    log "INFO" "Starting production workflow..."
+    
+    # Force clean build for production
+    CLEAN_BUILD=true
+    
+    run_pre_build_validation
+    execute_build
+    run_post_build_verification
+    
+    # Additional production checks
+    log "INFO" "Running production-specific checks..."
+    
+    log "SUCCESS" "Production workflow completed"
+}
+
+cloud_workflow() {
+    log "INFO" "Starting cloud build workflow..."
+    
+    # Enable monitoring for cloud builds
+    ENABLE_MONITORING=true
+    ENABLE_NOTIFICATIONS=true
+    
+    run_pre_build_validation
+    execute_build
+    run_post_build_verification
+    
+    log "SUCCESS" "Cloud workflow completed"
+}
+
+full_workflow() {
+    log "INFO" "Starting complete end-to-end workflow..."
+    
+    # Enable all features for full workflow
+    ENABLE_MONITORING=true
+    ENABLE_NOTIFICATIONS=true
+    AUTO_RECOVERY=true
+    CLEAN_BUILD=true
+    
+    run_pre_build_validation
+    execute_build
+    run_post_build_verification
+    
+    log "SUCCESS" "Full workflow completed"
+}
+
+# Command-line argument parsing
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --dev-workflow)
-                WORKFLOW_TYPE="development"
-                BUILD_TYPE="development"
-                shift
-                ;;
-            --prod-workflow)
-                WORKFLOW_TYPE="production"
-                BUILD_TYPE="production"
-                shift
-                ;;
-            --cloud-workflow)
-                WORKFLOW_TYPE="cloud"
-                BUILD_TYPE="production"
-                shift
-                ;;
-            --full-workflow)
-                WORKFLOW_TYPE="full"
-                shift
-                ;;
-            -p|--platform)
+            --platform)
                 PLATFORM="$2"
                 shift 2
                 ;;
-            -t|--type)
+            --build-type)
                 BUILD_TYPE="$2"
                 shift 2
                 ;;
-            -c|--clean)
+            --clean)
                 CLEAN_BUILD=true
                 shift
                 ;;
-            -s|--skip-validation)
+            --skip-validation)
                 SKIP_VALIDATION=true
                 shift
                 ;;
-            -n|--no-verify)
-                AUTO_VERIFY=false
-                shift
-                ;;
-            -a|--auto-submit)
-                AUTO_SUBMIT=true
+            --disable-monitoring)
+                ENABLE_MONITORING=false
                 shift
                 ;;
             --notify)
-                SEND_NOTIFICATIONS=true
+                ENABLE_NOTIFICATIONS=true
                 shift
                 ;;
             --email)
-                EMAIL_RECIPIENT="$2"
-                SEND_NOTIFICATIONS=true
+                EMAIL_NOTIFICATIONS="$2"
+                ENABLE_NOTIFICATIONS=true
                 shift 2
                 ;;
             --slack)
                 SLACK_WEBHOOK="$2"
-                SEND_NOTIFICATIONS=true
+                ENABLE_NOTIFICATIONS=true
                 shift 2
                 ;;
-            -h|--help)
-                show_usage
+            --discord)
+                DISCORD_WEBHOOK="$2"
+                ENABLE_NOTIFICATIONS=true
+                shift 2
+                ;;
+            --parallel)
+                PARALLEL_BUILDS=true
+                shift
+                ;;
+            --dev-workflow)
+                WORKFLOW="dev"
+                shift
+                ;;
+            --prod-workflow)
+                WORKFLOW="prod"
+                shift
+                ;;
+            --cloud-workflow)
+                WORKFLOW="cloud"
+                shift
+                ;;
+            --full-workflow)
+                WORKFLOW="full"
+                shift
+                ;;
+            --help)
+                show_help
                 exit 0
                 ;;
             *)
-                log_error "Unknown option: $1"
-                show_usage
+                log "ERROR" "Unknown argument: $1"
+                show_help
                 exit 1
                 ;;
         esac
     done
-    
-    # Validate workflow type
-    if [ -z "$WORKFLOW_TYPE" ]; then
-        log_error "Workflow type is required. Use --dev-workflow, --prod-workflow, --cloud-workflow, or --full-workflow"
-        exit 1
-    fi
-    
-    # Set defaults
-    if [ -z "$PLATFORM" ]; then
-        PLATFORM="all"
-    fi
-    
-    if [ -z "$BUILD_TYPE" ]; then
-        BUILD_TYPE="production"
-    fi
-    
-    # Validate platform
-    if [[ ! "$PLATFORM" =~ ^(android|ios|all)$ ]]; then
-        log_error "Invalid platform: $PLATFORM. Must be 'android', 'ios', or 'all'"
-        exit 1
-    fi
-    
-    # Validate build type
-    if [[ ! "$BUILD_TYPE" =~ ^(development|production)$ ]]; then
-        log_error "Invalid build type: $BUILD_TYPE. Must be 'development' or 'production'"
-        exit 1
-    fi
 }
 
-# Function to setup environment
-setup_environment() {
-    log_info "Setting up build environment..."
-    
-    cd "$PROJECT_ROOT"
-    
-    # Create necessary directories
-    mkdir -p "${PROJECT_ROOT}/scripts/build"
-    mkdir -p "${PROJECT_ROOT}/builds"
-    mkdir -p "${PROJECT_ROOT}/logs"
-    
-    # Set environment variables
-    export NODE_ENV="$BUILD_TYPE"
-    export EXPO_DEBUG=$([ "$BUILD_TYPE" = "development" ] && echo "true" || echo "false")
-    export DEBUG=$([ "$BUILD_TYPE" = "development" ] && echo "1" || echo "0")
-    
-    log_info "Environment setup completed"
-    echo "ENV: Environment setup for $BUILD_TYPE build" >> "$LOG_FILE"
-}
+show_help() {
+    cat << EOF
+Advanced Build Automation Script
 
-# Function to send notifications
-send_notification() {
-    local subject=$1
-    local message=$2
-    local status=$3  # success, warning, error
-    
-    if [ "$SEND_NOTIFICATIONS" = false ]; then
-        return 0
-    fi
-    
-    log_info "Sending notification: $subject"
-    
-    # Send email notification
-    if [ -n "$EMAIL_RECIPIENT" ] && command -v mail &> /dev/null; then
-        echo "$message" | mail -s "$subject" "$EMAIL_RECIPIENT" || log_warning "Failed to send email notification"
-        echo "NOTIFICATION: Email sent to $EMAIL_RECIPIENT" >> "$LOG_FILE"
-    fi
-    
-    # Send Slack notification
-    if [ -n "$SLACK_WEBHOOK" ] && command -v curl &> /dev/null; then
-        local color
-        case $status in
-            "success") color="good" ;;
-            "warning") color="warning" ;;
-            "error") color="danger" ;;
-            *) color="good" ;;
-        esac
-        
-        local payload="{\"text\":\"$subject\",\"attachments\":[{\"color\":\"$color\",\"text\":\"$message\"}]}"
-        
-        if curl -s -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK" > /dev/null; then
-            log_success "Slack notification sent"
-            echo "NOTIFICATION: Slack notification sent" >> "$LOG_FILE"
-        else
-            log_warning "Failed to send Slack notification"
-        fi
-    fi
-}
+Usage: $0 [OPTIONS] [WORKFLOW]
 
-# Function to run development workflow
-run_development_workflow() {
-    log_info "=== RUNNING DEVELOPMENT WORKFLOW ==="
-    
-    local workflow_errors=0
-    
-    # Step 1: Pre-build validation
-    if [ "$SKIP_VALIDATION" = false ]; then
-        log_info "Step 1: Running pre-build validation..."
-        if bash "$SCRIPT_DIR/pre-build-validation.sh"; then
-            log_success "Pre-build validation passed"
-            echo "WORKFLOW: Development validation passed" >> "$LOG_FILE"
-        else
-            log_error "Pre-build validation failed"
-            echo "ERROR: Development validation failed" >> "$LOG_FILE"
-            ((workflow_errors++))
-            return $workflow_errors
-        fi
-    fi
-    
-    # Step 2: Development build
-    log_info "Step 2: Running development build..."
-    local build_args="--platform $PLATFORM"
-    if [ "$CLEAN_BUILD" = true ]; then
-        build_args="$build_args --clean"
-    fi
-    
-    if bash "$SCRIPT_DIR/local-build-dev.sh" $build_args; then
-        log_success "Development build completed"
-        echo "WORKFLOW: Development build completed" >> "$LOG_FILE"
-    else
-        log_error "Development build failed"
-        echo "ERROR: Development build failed" >> "$LOG_FILE"
-        ((workflow_errors++))
-        return $workflow_errors
-    fi
-    
-    # Step 3: Post-build verification
-    if [ "$AUTO_VERIFY" = true ]; then
-        log_info "Step 3: Running post-build verification..."
-        if bash "$SCRIPT_DIR/post-build-verification.sh" --platform "$PLATFORM" --type development; then
-            log_success "Post-build verification passed"
-            echo "WORKFLOW: Development verification passed" >> "$LOG_FILE"
-        else
-            log_warning "Post-build verification had issues"
-            echo "WARNING: Development verification issues" >> "$LOG_FILE"
-        fi
-    fi
-    
-    return $workflow_errors
-}
+OPTIONS:
+    --platform PLATFORM     Target platform (android|ios|all) [default: all]
+    --build-type TYPE       Build type (development|preview|production) [default: development]
+    --clean                 Clean build artifacts before building
+    --skip-validation       Skip pre-build validation
+    --disable-monitoring    Disable build monitoring
+    --notify                Enable notifications
+    --email EMAIL           Email for notifications
+    --slack WEBHOOK         Slack webhook URL
+    --discord WEBHOOK       Discord webhook URL
+    --parallel              Run parallel builds (Android + iOS)
 
-# Function to run production workflow
-run_production_workflow() {
-    log_info "=== RUNNING PRODUCTION WORKFLOW ==="
-    
-    local workflow_errors=0
-    
-    # Step 1: Pre-build validation
-    if [ "$SKIP_VALIDATION" = false ]; then
-        log_info "Step 1: Running pre-build validation..."
-        if bash "$SCRIPT_DIR/pre-build-validation.sh"; then
-            log_success "Pre-build validation passed"
-            echo "WORKFLOW: Production validation passed" >> "$LOG_FILE"
-        else
-            log_error "Pre-build validation failed"
-            echo "ERROR: Production validation failed" >> "$LOG_FILE"
-            ((workflow_errors++))
-            return $workflow_errors
-        fi
-    fi
-    
-    # Step 2: Production build
-    log_info "Step 2: Running production build..."
-    local build_args="--platform $PLATFORM"
-    if [ "$CLEAN_BUILD" = true ]; then
-        build_args="$build_args --clean"
-    fi
-    
-    if bash "$SCRIPT_DIR/local-build-prod.sh" $build_args; then
-        log_success "Production build completed"
-        echo "WORKFLOW: Production build completed" >> "$LOG_FILE"
-    else
-        log_error "Production build failed"
-        echo "ERROR: Production build failed" >> "$LOG_FILE"
-        ((workflow_errors++))
-        return $workflow_errors
-    fi
-    
-    # Step 3: Post-build verification with deep checks
-    if [ "$AUTO_VERIFY" = true ]; then
-        log_info "Step 3: Running comprehensive post-build verification..."
-        if bash "$SCRIPT_DIR/post-build-verification.sh" --platform "$PLATFORM" --type production --deep --performance --security; then
-            log_success "Comprehensive verification passed"
-            echo "WORKFLOW: Production verification passed" >> "$LOG_FILE"
-        else
-            log_error "Comprehensive verification failed"
-            echo "ERROR: Production verification failed" >> "$LOG_FILE"
-            ((workflow_errors++))
-            return $workflow_errors
-        fi
-    fi
-    
-    return $workflow_errors
-}
+WORKFLOWS:
+    --dev-workflow         Development workflow
+    --prod-workflow        Production workflow
+    --cloud-workflow       Cloud build workflow
+    --full-workflow        Complete end-to-end workflow
 
-# Function to run cloud workflow
-run_cloud_workflow() {
-    log_info "=== RUNNING CLOUD WORKFLOW ==="
-    
-    local workflow_errors=0
-    
-    # Step 1: Pre-build validation
-    if [ "$SKIP_VALIDATION" = false ]; then
-        log_info "Step 1: Running pre-build validation..."
-        if bash "$SCRIPT_DIR/pre-build-validation.sh"; then
-            log_success "Pre-build validation passed"
-            echo "WORKFLOW: Cloud validation passed" >> "$LOG_FILE"
-        else
-            log_error "Pre-build validation failed"
-            echo "ERROR: Cloud validation failed" >> "$LOG_FILE"
-            ((workflow_errors++))
-            return $workflow_errors
-        fi
-    fi
-    
-    # Step 2: Cloud build with EAS
-    log_info "Step 2: Running cloud build with EAS..."
-    local build_args="--platform $PLATFORM --profile production"
-    if [ "$AUTO_SUBMIT" = true ]; then
-        build_args="$build_args --auto-submit"
-    fi
-    
-    if bash "$SCRIPT_DIR/cloud-build-eas.sh" $build_args; then
-        log_success "Cloud build completed"
-        echo "WORKFLOW: Cloud build completed" >> "$LOG_FILE"
-    else
-        log_error "Cloud build failed"
-        echo "ERROR: Cloud build failed" >> "$LOG_FILE"
-        ((workflow_errors++))
-        return $workflow_errors
-    fi
-    
-    # Step 3: Post-build verification of downloaded artifacts
-    if [ "$AUTO_VERIFY" = true ]; then
-        log_info "Step 3: Running post-build verification on cloud artifacts..."
-        if bash "$SCRIPT_DIR/post-build-verification.sh" --platform "$PLATFORM" --type production --deep; then
-            log_success "Cloud artifact verification passed"
-            echo "WORKFLOW: Cloud verification passed" >> "$LOG_FILE"
-        else
-            log_warning "Cloud artifact verification had issues"
-            echo "WARNING: Cloud verification issues" >> "$LOG_FILE"
-        fi
-    fi
-    
-    return $workflow_errors
-}
+EXAMPLES:
+    $0 --dev-workflow --platform android
+    $0 --prod-workflow --clean --notify --slack https://hooks.slack.com/...
+    $0 --full-workflow --parallel --email dev@company.com
 
-# Function to run full workflow
-run_full_workflow() {
-    log_info "=== RUNNING FULL END-TO-END WORKFLOW ==="
-    
-    local workflow_errors=0
-    
-    # Step 1: Development workflow
-    log_info "Phase 1: Development Workflow"
-    local original_build_type="$BUILD_TYPE"
-    BUILD_TYPE="development"
-    
-    if run_development_workflow; then
-        log_success "Development workflow completed successfully"
-        echo "WORKFLOW: Full development phase completed" >> "$LOG_FILE"
-    else
-        log_error "Development workflow failed"
-        echo "ERROR: Full development phase failed" >> "$LOG_FILE"
-        ((workflow_errors++))
-    fi
-    
-    # Step 2: Production workflow
-    log_info "Phase 2: Production Workflow"
-    BUILD_TYPE="production"
-    
-    if run_production_workflow; then
-        log_success "Production workflow completed successfully"
-        echo "WORKFLOW: Full production phase completed" >> "$LOG_FILE"
-    else
-        log_error "Production workflow failed"
-        echo "ERROR: Full production phase failed" >> "$LOG_FILE"
-        ((workflow_errors++))
-    fi
-    
-    # Step 3: Cloud workflow (if no errors so far)
-    if [ $workflow_errors -eq 0 ]; then
-        log_info "Phase 3: Cloud Workflow"
-        
-        if run_cloud_workflow; then
-            log_success "Cloud workflow completed successfully"
-            echo "WORKFLOW: Full cloud phase completed" >> "$LOG_FILE"
-        else
-            log_error "Cloud workflow failed"
-            echo "ERROR: Full cloud phase failed" >> "$LOG_FILE"
-            ((workflow_errors++))
-        fi
-    else
-        log_warning "Skipping cloud workflow due to previous errors"
-        echo "WARNING: Full cloud phase skipped due to errors" >> "$LOG_FILE"
-    fi
-    
-    # Restore original build type
-    BUILD_TYPE="$original_build_type"
-    
-    return $workflow_errors
-}
-
-# Function to cleanup build artifacts
-cleanup_old_artifacts() {
-    log_info "Cleaning up old build artifacts..."
-    
-    cd "$PROJECT_ROOT"
-    
-    # Clean old logs (keep last 10)
-    if [ -d "logs" ]; then
-        find logs -name "*.log" -type f -mtime +7 -delete 2>/dev/null || true
-        log_info "Cleaned old log files"
-    fi
-    
-    # Clean old build artifacts (keep last 5 builds per platform)
-    if [ -d "builds" ]; then
-        # Keep only recent APK files
-        find builds -name "*.apk" -type f | sort -t- -k2 -n | head -n -5 | xargs rm -f 2>/dev/null || true
-        
-        # Keep only recent AAB files
-        find builds -name "*.aab" -type f | sort -t- -k2 -n | head -n -5 | xargs rm -f 2>/dev/null || true
-        
-        # Keep only recent IPA files
-        find builds -name "*.ipa" -type f | sort -t- -k2 -n | head -n -5 | xargs rm -f 2>/dev/null || true
-        
-        log_info "Cleaned old build artifacts"
-    fi
-    
-    echo "CLEANUP: Old artifacts cleaned" >> "$LOG_FILE"
-}
-
-# Function to generate workflow report
-generate_workflow_report() {
-    local workflow_result=$1
-    
-    log_info "Generating workflow report..."
-    
-    local report_file="${PROJECT_ROOT}/scripts/build/workflow-report.txt"
-    
-    cat > "$report_file" << EOF
-Mobile Mechanic App - Build Automation Workflow Report
-======================================================
-
-Workflow Date: $(date)
-Workflow Type: $WORKFLOW_TYPE
-Platform: $PLATFORM
-Build Type: $BUILD_TYPE
-Clean Build: $CLEAN_BUILD
-
-Configuration:
-- Skip Validation: $SKIP_VALIDATION
-- Auto Verify: $AUTO_VERIFY
-- Auto Submit: $AUTO_SUBMIT
-- Send Notifications: $SEND_NOTIFICATIONS
-
-Workflow Steps Executed:
 EOF
-    
-    # Add workflow-specific steps
-    case $WORKFLOW_TYPE in
-        "development")
-            echo "1. Pre-build validation ($([ "$SKIP_VALIDATION" = true ] && echo "SKIPPED" || echo "EXECUTED"))" >> "$report_file"
-            echo "2. Development build (EXECUTED)" >> "$report_file"
-            echo "3. Post-build verification ($([ "$AUTO_VERIFY" = true ] && echo "EXECUTED" || echo "SKIPPED"))" >> "$report_file"
-            ;;
-        "production")
-            echo "1. Pre-build validation ($([ "$SKIP_VALIDATION" = true ] && echo "SKIPPED" || echo "EXECUTED"))" >> "$report_file"
-            echo "2. Production build (EXECUTED)" >> "$report_file"
-            echo "3. Comprehensive verification ($([ "$AUTO_VERIFY" = true ] && echo "EXECUTED" || echo "SKIPPED"))" >> "$report_file"
-            ;;
-        "cloud")
-            echo "1. Pre-build validation ($([ "$SKIP_VALIDATION" = true ] && echo "SKIPPED" || echo "EXECUTED"))" >> "$report_file"
-            echo "2. Cloud build with EAS (EXECUTED)" >> "$report_file"
-            echo "3. Artifact verification ($([ "$AUTO_VERIFY" = true ] && echo "EXECUTED" || echo "SKIPPED"))" >> "$report_file"
-            ;;
-        "full")
-            echo "Phase 1: Development workflow (EXECUTED)" >> "$report_file"
-            echo "Phase 2: Production workflow (EXECUTED)" >> "$report_file"
-            echo "Phase 3: Cloud workflow (EXECUTED)" >> "$report_file"
-            ;;
-    esac
-    
-    echo "" >> "$report_file"
-    echo "Workflow Result: $([ $workflow_result -eq 0 ] && echo "SUCCESS" || echo "FAILED ($workflow_result errors)")" >> "$report_file"
-    
-    # Add build artifacts summary
-    echo "" >> "$report_file"
-    echo "Build Artifacts Generated:" >> "$report_file"
-    
-    if [ -d "${PROJECT_ROOT}/builds" ]; then
-        find "${PROJECT_ROOT}/builds" -name "*.apk" -o -name "*.aab" -o -name "*.ipa" | while read -r artifact; do
-            local file_size
-            file_size=$(du -h "$artifact" | cut -f1)
-            echo "- $(basename "$artifact") ($file_size)" >> "$report_file"
-        done
-    fi
-    
-    # Add log files references
-    echo "" >> "$report_file"
-    echo "Log Files:" >> "$report_file"
-    echo "- Main workflow log: scripts/build/automation.log" >> "$report_file"
-    echo "- Validation log: scripts/build/validation.log" >> "$report_file"
-    echo "- Build logs: scripts/build/*-build.log" >> "$report_file"
-    echo "- Verification log: scripts/build/verification.log" >> "$report_file"
-    
-    echo "" >> "$report_file"
-    echo "Workflow completed at: $(date)" >> "$report_file"
-    
-    log_success "Workflow report generated: $report_file"
-    echo "REPORT: Workflow report generated" >> "$LOG_FILE"
 }
 
-# Main workflow function
+# Main execution
 main() {
-    log_info "=== BUILD AUTOMATION WORKFLOW STARTED ==="
-    log_info "Workflow Type: $WORKFLOW_TYPE"
-    log_info "Platform: $PLATFORM"
-    log_info "Build Type: $BUILD_TYPE"
-    log_info "Clean Build: $CLEAN_BUILD"
+    log "INFO" "Starting Advanced Build Automation System"
+    log "INFO" "Project: Mobile Mechanic App"
+    log "INFO" "Script version: 2.0"
     
-    local start_time
-    start_time=$(date +%s)
+    # Setup
+    setup_directories
+    start_system_monitor
     
-    # Setup environment
-    setup_environment
+    # Parse command line arguments
+    parse_arguments "$@"
     
-    # Cleanup old artifacts if clean build
-    if [ "$CLEAN_BUILD" = true ]; then
-        cleanup_old_artifacts
+    # Validate configuration
+    if [[ ! "$PLATFORM" =~ ^(android|ios|all)$ ]]; then
+        log "ERROR" "Invalid platform: $PLATFORM"
+        exit 1
     fi
     
-    # Send start notification
-    send_notification "Build Workflow Started" "Starting $WORKFLOW_TYPE workflow for $PLATFORM platform" "success"
+    if [[ ! "$BUILD_TYPE" =~ ^(development|preview|production)$ ]]; then
+        log "ERROR" "Invalid build type: $BUILD_TYPE"
+        exit 1
+    fi
     
-    # Run the appropriate workflow
-    local workflow_errors=0
-    
-    case $WORKFLOW_TYPE in
-        "development")
-            run_development_workflow || workflow_errors=$?
+    # Execute workflow
+    case $WORKFLOW in
+        "dev")
+            dev_workflow
             ;;
-        "production")
-            run_production_workflow || workflow_errors=$?
+        "prod")
+            prod_workflow
             ;;
         "cloud")
-            run_cloud_workflow || workflow_errors=$?
+            cloud_workflow
             ;;
         "full")
-            run_full_workflow || workflow_errors=$?
+            full_workflow
             ;;
         *)
-            log_error "Unknown workflow type: $WORKFLOW_TYPE"
-            workflow_errors=1
+            # Default workflow
+            dev_workflow
             ;;
     esac
     
-    # Calculate execution time
-    local end_time
-    local duration
-    end_time=$(date +%s)
-    duration=$((end_time - start_time))
-    
-    # Generate workflow report
-    generate_workflow_report $workflow_errors
-    
-    # Send completion notification
-    local notification_subject
-    local notification_message
-    local notification_status
-    
-    if [ $workflow_errors -eq 0 ]; then
-        notification_subject="Build Workflow Completed Successfully"
-        notification_message="$WORKFLOW_TYPE workflow completed successfully for $PLATFORM platform. Duration: ${duration}s"
-        notification_status="success"
-        log_success "=== BUILD AUTOMATION WORKFLOW COMPLETED SUCCESSFULLY ==="
-        log_success "Workflow completed in ${duration} seconds"
-        log_success "Check workflow report: ${PROJECT_ROOT}/scripts/build/workflow-report.txt"
-    else
-        notification_subject="Build Workflow Failed"
-        notification_message="$WORKFLOW_TYPE workflow failed with $workflow_errors errors for $PLATFORM platform. Duration: ${duration}s"
-        notification_status="error"
-        log_error "=== BUILD AUTOMATION WORKFLOW FAILED ==="
-        log_error "Workflow failed with $workflow_errors errors after ${duration} seconds"
-        log_error "Check logs and reports for details"
-    fi
-    
-    send_notification "$notification_subject" "$notification_message" "$notification_status"
-    
-    # Final log entry
-    echo "Workflow completed: $(date)" >> "$LOG_FILE"
-    echo "Duration: ${duration} seconds" >> "$LOG_FILE"
-    echo "Result: $([ $workflow_errors -eq 0 ] && echo "SUCCESS" || echo "FAILED ($workflow_errors errors)")" >> "$LOG_FILE"
-    
-    exit $workflow_errors
+    log "SUCCESS" "Build automation completed successfully!"
+    send_notification "success" "Build automation completed successfully"
 }
 
-# Handle script interruption
-trap 'log_error "Workflow interrupted"; send_notification "Build Workflow Interrupted" "Build automation workflow was interrupted" "warning"; echo "RESULT: INTERRUPTED" >> "$LOG_FILE"; exit 130' INT TERM
-
-# Parse arguments and run main function
-parse_arguments "$@"
-main
+# Execute main function with all arguments
+main "$@"

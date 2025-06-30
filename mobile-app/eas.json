@@ -1,71 +1,186 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote",
+    "requireCommit": true,
+    "promptToConfigurePushNotifications": false
   },
   "build": {
+    "base": {
+      "node": "20.11.0",
+      "yarn": "1.22.21",
+      "env": {
+        "EXPO_SKIP_MANIFEST_VALIDATION_TOKEN": "true",
+        "EXPO_NO_DOTENV": "1"
+      },
+      "cache": {
+        "disabled": false,
+        "customPaths": [
+          "node_modules",
+          ".yarn/cache",
+          "android/.gradle",
+          "ios/Pods",
+          "~/.gradle/caches",
+          "~/.gradle/wrapper"
+        ],
+        "cacheDefaultPaths": true
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "gradleCommand": ":app:assembleDebug",
+        "image": "latest"
       },
       "ios": {
-        "buildConfiguration": "Debug"
+        "buildConfiguration": "Debug",
+        "image": "latest",
+        "simulator": true
       },
       "env": {
         "NODE_ENV": "development",
-        "EXPO_DEBUG": "true"
+        "EXPO_DEBUG": "true",
+        "EXPO_DEVTOOLS_LISTEN_ADDRESS": "0.0.0.0",
+        "REACT_NATIVE_PACKAGER_HOSTNAME": "0.0.0.0"
       },
       "cache": {
         "disabled": true
-      }
+      },
+      "prebuildCommand": "npm run prebuild:dev",
+      "postInstall": "npm run postinstall:dev"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "channel": "preview",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       },
       "env": {
-        "NODE_ENV": "staging"
+        "NODE_ENV": "staging",
+        "EXPO_PUBLIC_API_URL": "https://staging-api.heinicus-mobile-mechanic.com",
+        "EXPO_PUBLIC_ENVIRONMENT": "staging"
       },
       "cache": {
-        "key": "preview-cache-v1"
-      }
+        "key": "preview-cache-v2",
+        "customPaths": [
+          "node_modules",
+          ".yarn/cache",
+          "android/.gradle",
+          "ios/Pods",
+          "~/.gradle/caches",
+          "~/.gradle/wrapper",
+          "builds/cache"
+        ]
+      },
+      "prebuildCommand": "npm run prebuild:preview",
+      "postInstall": "npm run postinstall:preview"
     },
     "production": {
+      "extends": "base",
       "channel": "production",
       "android": {
         "buildType": "aab",
-        "gradleCommand": ":app:bundleRelease"
+        "gradleCommand": ":app:bundleRelease",
+        "image": "latest"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       },
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.heinicus-mobile-mechanic.com",
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_OPTIMIZE": "true"
       },
       "cache": {
-        "key": "production-cache-v1"
+        "key": "production-cache-v2",
+        "customPaths": [
+          "node_modules",
+          ".yarn/cache",
+          "android/.gradle",
+          "ios/Pods",
+          "~/.gradle/caches",
+          "~/.gradle/wrapper",
+          "builds/cache"
+        ]
+      },
+      "prebuildCommand": "npm run prebuild:production",
+      "postInstall": "npm run postinstall:production"
+    },
+    "production-ios": {
+      "extends": "production",
+      "platform": "ios",
+      "ios": {
+        "buildConfiguration": "Release",
+        "image": "latest",
+        "bundler": "13.2.0"
+      }
+    },
+    "production-android": {
+      "extends": "production", 
+      "platform": "android",
+      "android": {
+        "buildType": "aab",
+        "gradleCommand": ":app:bundleRelease",
+        "image": "latest"
       }
     }
   },
   "submit": {
-    "production": {
+    "base": {
       "android": {
-        "serviceAccountKeyPath": "../path/to/api-key.json",
+        "track": "internal",
+        "releaseStatus": "draft",
+        "rollout": 0.1
+      },
+      "ios": {
+        "copyright": "2024 Heinicus Mobile Mechanic",
+        "primaryCategory": "BUSINESS",
+        "secondaryCategory": "UTILITIES"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "android": {
         "track": "internal",
         "releaseStatus": "draft"
       },
       "ios": {
         "appleId": "your-apple-id@example.com",
         "ascAppId": "1234567890",
-        "appleTeamId": "ABCD123456"
+        "appleTeamId": "ABCD123456",
+        "sku": "heinicus-mobile-mechanic-preview"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "android": {
+        "serviceAccountKeyPath": "../path/to/api-key.json",
+        "track": "production",
+        "releaseStatus": "draft",
+        "rollout": 0.1,
+        "changesNotSentForReview": false
+      },
+      "ios": {
+        "appleId": "your-apple-id@example.com",
+        "ascAppId": "1234567890",
+        "appleTeamId": "ABCD123456",
+        "sku": "heinicus-mobile-mechanic",
+        "language": "en-US",
+        "companyName": "Heinicus Mobile Mechanic LLC",
+        "appName": "Heinicus Mobile Mechanic"
       }
     }
   }
