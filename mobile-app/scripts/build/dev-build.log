@@ -1,0 +1,9 @@
+Development Build Started: Sun Jun 29 19:35:38 CDT 2025
+VALIDATION: passed
+DEPS: npm install successful
+DEPS: verification successful
+ENV: NODE_ENV=development
+ENV: EXPO_DEBUG=true
+ENV: DEBUG=1
+TOOL: EAS CLI via npx
+ERROR: prebuild failed
