@@ -146,7 +146,7 @@ export const CustomerSupportWidget: React.FC<CustomerSupportWidgetProps> = ({
       <div className="bg-blue-600 text-white p-4 rounded-t-none sm:rounded-t-lg flex justify-between items-center">
         <div>
           <h3 id="chat-header" className="font-semibold">Customer Support</h3>
-          <p className="text-sm opacity-90">We're here to help!</p>
+          <p className="text-sm opacity-90">We&apos;re here to help!</p>
         </div>
         {onToggleMinimize && (
           <button
