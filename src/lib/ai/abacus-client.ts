@@ -84,7 +84,7 @@ export class AbacusAIClient {
     this.client.interceptors.request.use(
       (config) => {
         // Add timestamp for rate limiting
-        config.metadata = { ...config.metadata, requestTime: Date.now() };
+        (config as any).metadata = { ...(config as any).metadata, requestTime: Date.now() };
         return config;
       },
       (error) => Promise.reject(error)

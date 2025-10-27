@@ -1,4 +1,5 @@
 import { getAbacusAIClient, type ChatRequest, type ChatResponse } from './abacus-client';
+import { CUSTOMER_SUPPORT_PROMPTS, categorizeMessage, isBusinessHours, getNextBusinessHour } from '~/config/ai-agents';
 
 export interface CustomerSupportContext {
   customerId?: string;
@@ -52,34 +53,65 @@ export class CustomerSupportAgent {
 
   async handleCustomerQuery(request: CustomerSupportRequest): Promise<CustomerSupportResponse> {
     try {
+      // Categorize the message and get appropriate context
+      const messageCategory = categorizeMessage(request.message);
+      const businessHoursOpen = isBusinessHours();
+      
+      // Build enhanced context with business rules and customer personalization
+      const enhancedContext = {
+        agentType: 'customer-support',
+        systemPrompt: CUSTOMER_SUPPORT_PROMPTS.systemPrompt,
+        customerContext: request.context,
+        messageCategory,
+        businessState: {
+          isBusinessHours: businessHoursOpen,
+          nextBusinessHour: businessHoursOpen ? null : getNextBusinessHour(),
+        },
+        capabilities: [
+          'booking_appointments',
+          'troubleshooting',
+          'pricing_inquiries',
+          'service_status_updates',
+          'payment_questions',
+          'general_support',
+          'emergency_routing',
+          'multilingual_support'
+        ],
+        businessHours: {
+          monday: '8:00-18:00',
+          tuesday: '8:00-18:00',
+          wednesday: '8:00-18:00',
+          thursday: '8:00-18:00',
+          friday: '8:00-18:00',
+          saturday: '9:00-16:00',
+          sunday: 'closed'
+        },
+        serviceAreas: ['Greater Metro Area', 'Downtown District', 'North County', 'South County', 'East Valley', 'West Hills'],
+        emergencyContact: '(555) 911-AUTO',
+        companyName: 'Heinicus Mobile Mechanic Services',
+        conversationGuidelines: {
+          emergency: messageCategory === 'emergency',
+          booking: messageCategory === 'booking',
+          pricing: messageCategory === 'pricing',
+          status: messageCategory === 'status',
+        }
+      };
+
+      // Create personalized welcome message if this is a new session
+      let enhancedMessage = request.message;
+      if (!request.sessionId || request.message.toLowerCase().includes('hello') || request.message.toLowerCase().includes('hi')) {
+        const welcomeMessage = typeof CUSTOMER_SUPPORT_PROMPTS.welcome === 'function' 
+          ? CUSTOMER_SUPPORT_PROMPTS.welcome(request.context?.customerName, request.context?.vehicleInfo)
+          : CUSTOMER_SUPPORT_PROMPTS.welcome;
+        enhancedMessage = `${welcomeMessage}\n\nCustomer says: ${request.message}`;
+      }
+
       const chatRequest: ChatRequest = {
-        message: request.message,
+        message: enhancedMessage,
         sessionId: request.sessionId,
         userId: request.customerId,
         agentId: this.agentId,
-        context: {
-          agentType: 'customer-support',
-          customerContext: request.context,
-          capabilities: [
-            'booking_appointments',
-            'troubleshooting',
-            'pricing_inquiries',
-            'service_status_updates',
-            'payment_questions',
-            'general_support'
-          ],
-          businessHours: {
-            monday: '8:00-18:00',
-            tuesday: '8:00-18:00',
-            wednesday: '8:00-18:00',
-            thursday: '8:00-18:00',
-            friday: '8:00-18:00',
-            saturday: '9:00-16:00',
-            sunday: 'closed'
-          },
-          serviceAreas: ['Greater Metro Area', 'Surrounding Counties'],
-          emergencyContact: process.env.EMERGENCY_CONTACT_NUMBER,
-        },
+        context: enhancedContext,
       };
 
       const response = await this.client.sendMessage(chatRequest);

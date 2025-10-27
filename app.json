@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Heinicus Mobile Mechanic",
+    "slug": "heinicus-mobile-mechanic-app",
+    "version": "1.0.0",
+    "platforms": [
+      "web"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "67c1bfc4-1fa1-49c1-81e4-444f6cdc27e1"
+      }
+    }
+  }
+}

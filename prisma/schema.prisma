@@ -39,6 +39,10 @@ model User {
   // Reviews received by this user (for mechanics)
   reviewsReceived Review[] @relation("ReviewReceiver")
 
+  // User indexes for performance
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -54,6 +58,7 @@ model Customer {
   zipCode          String?
   emergencyContact String?
   preferredPayment PaymentMethod @default(CARD)
+  stripeCustomerId String?       @unique
 
   // Relationships
   vehicles            Vehicle[]
@@ -134,16 +139,23 @@ model Vehicle {
   color       String?
   licensePlate String?
 
-  // Technical specifications
+  // Technical specifications (enhanced for VIN decoding)
   engine       String?
+  engineCode   String?  // Added for diagnostic targeting
+  displacement String?  // Added for engine specs
   transmission String?
   fuelType     String?
   bodyStyle    String?
+  driveType    String?  // Added for drivetrain info
 
   // Current status
   mileage     Int?
   lastService DateTime?
   nextService DateTime?
+
+  // VIN decode metadata
+  vinDecodeDate DateTime? // When VIN was last decoded
+  vinDecodeSource String? // NHTSA, manual, etc.
 
   // Relationships
   serviceRequests     ServiceRequest[]
@@ -153,6 +165,11 @@ model Vehicle {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Vehicle indexes for performance
+  @@index([vin])
+  @@index([customerId])
+  @@index([make, model, year])
+  @@index([engineCode])  // Added for diagnostic queries
   @@map("vehicles")
 }
 
@@ -161,10 +178,22 @@ model VINDecodeHistory {
   vehicleId String
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   vin       String
-  decodedData Json
-  source    String   // API source used for decoding
+  decodedData Json   // Full NHTSA response
+  source    String   // NHTSA, manual, fallback
+  success   Boolean  @default(true)
+  errorMessage String? // If decode failed
+  
+  // Extracted key fields for quick access
+  make      String?
+  model     String?
+  year      Int?
+  engineCode String?
+  
   createdAt DateTime @default(now())
 
+  @@index([vin])
+  @@index([vehicleId])
+  @@index([source])
   @@map("vin_decode_history")
 }
 
@@ -187,6 +216,10 @@ model ServiceRequest {
   status          ServiceStatus     @default(PENDING)
   estimatedCost   Decimal?          @db.Decimal(10, 2)
   actualCost      Decimal?          @db.Decimal(10, 2)
+  
+  // VIN information for quick access (enhanced)
+  jobVin          String?           // VIN specific to this job
+  jobEngineCode   String?           // Engine code for diagnostic context
   
   // Location information
   serviceLocation String
@@ -213,6 +246,13 @@ model ServiceRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Service Request indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([status])
+  @@index([serviceType])
+  @@index([createdAt])
+  @@index([scheduledDate])
   @@map("service_requests")
 }
 
@@ -313,6 +353,11 @@ model Appointment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Appointment indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([scheduledDate])
+  @@index([status])
   @@map("appointments")
 }
 
@@ -353,6 +398,11 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Payment indexes for performance
+  @@index([customerId])
+  @@index([status])
+  @@index([stripePaymentId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -386,6 +436,11 @@ model AISession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // AI Session indexes for performance
+  @@index([sessionId])
+  @@index([userId])
+  @@index([agentType])
+  @@index([isActive])
   @@map("ai_sessions")
 }
 
@@ -462,6 +517,11 @@ model MaintenanceSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Maintenance Schedule indexes for performance
+  @@index([vehicleId])
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([isCompleted])
   @@map("maintenance_schedules")
 }
 
@@ -537,6 +597,12 @@ model Notification {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Notification indexes for performance
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([type])
+  @@index([isRead])
+  @@index([scheduledFor])
   @@map("notifications")
 }
 
@@ -664,52 +730,3 @@ enum NotificationPriority {
   URGENT
 }
 
-// Indexes for performance optimization
-// User indexes
-@@index([User.email])
-@@index([User.role])
-@@index([User.createdAt])
-
-// Vehicle indexes
-@@index([Vehicle.vin])
-@@index([Vehicle.customerId])
-@@index([Vehicle.make, Vehicle.model, Vehicle.year])
-
-// Service Request indexes
-@@index([ServiceRequest.customerId])
-@@index([ServiceRequest.mechanicId])
-@@index([ServiceRequest.status])
-@@index([ServiceRequest.serviceType])
-@@index([ServiceRequest.createdAt])
-@@index([ServiceRequest.scheduledDate])
-
-// Payment indexes
-@@index([Payment.customerId])
-@@index([Payment.status])
-@@index([Payment.stripePaymentId])
-@@index([Payment.createdAt])
-
-// AI Session indexes
-@@index([AISession.sessionId])
-@@index([AISession.userId])
-@@index([AISession.agentType])
-@@index([AISession.isActive])
-
-// Appointment indexes
-@@index([Appointment.customerId])
-@@index([Appointment.mechanicId])
-@@index([Appointment.scheduledDate])
-@@index([Appointment.status])
-
-// Notification indexes
-@@index([Notification.customerId])
-@@index([Notification.mechanicId])
-@@index([Notification.type])
-@@index([Notification.isRead])
-@@index([Notification.scheduledFor])
-
-// Maintenance Schedule indexes
-@@index([MaintenanceSchedule.vehicleId])
-@@index([MaintenanceSchedule.customerId])
-@@index([MaintenanceSchedule.dueDate])
-@@index([MaintenanceSchedule.isCompleted])
